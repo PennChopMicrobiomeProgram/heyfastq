@@ -23,6 +23,3 @@ classifiers = [
 
 [project.scripts]
 "heyfastq" = "heyfastqlib.command:heyfastq_main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/heyfastqlib"]
