@@ -12,12 +12,12 @@ from .paired_reads import (
     map_paired, filter_paired, trim_fixed, kscore_ok,
     )
 
-def randomseqs_subcommand(args):
+def random_seqs_subcommand(args):
     reads = parse_fastq_paired(args.input)
     out_reads = subsample(reads, args.n)
     write_fastq_paired(args.output, out_reads)
 
-def trimfixed_subcommand(args):
+def trim_fixed_subcommand(args):
     reads = parse_fastq_paired(args.input)
     out_reads = map_paired(reads, trim_fixed, length=args.length)
     write_fastq_paired(args.output, out_reads)
@@ -49,13 +49,13 @@ def heyfastq_main(argv=None):
     subparsers = main_parser.add_subparsers(
         title="Subcommands", required=True)
 
-    trimfixed_parser = subparsers.add_parser(
+    trim_fixed_parser = subparsers.add_parser(
         "trim-fixed", parents=[fastq_io_parser],
         help="Trim sequences to fixed length")
-    trimfixed_parser.add_argument(
+    trim_fixed_parser.add_argument(
         "--length", type=int, default=100,
         help="Length of output sequences")
-    trimfixed_parser.set_defaults(func=trimfixed_subcommand)
+    trim_fixed_parser.set_defaults(func=trim_fixed_subcommand)
 
     filter_kscore_parser = subparsers.add_parser(
         "filter-kscore", parents=[fastq_io_parser],
@@ -68,13 +68,13 @@ def heyfastq_main(argv=None):
         help="Minimum komplexity score (default: %(default)s)")
     filter_kscore_parser.set_defaults(func=filter_kscore_subcommand)
     
-    randomseqs_parser = subparsers.add_parser(
+    random_seqs_parser = subparsers.add_parser(
         "random-seqs", parents=[fastq_io_parser],
         help='Select random sequences')
-    randomseqs_parser.add_argument(
+    random_seqs_parser.add_argument(
         "--n", type=int, default=1000,
         help="Number of sequences (default: %(default)s)")
-    randomseqs_parser.set_defaults(func=randomseqs_subcommand)
+    random_seqs_parser.set_defaults(func=random_seqs_subcommand)
 
     args = main_parser.parse_args(argv)
     if args.input is None: # pragma: no cover
