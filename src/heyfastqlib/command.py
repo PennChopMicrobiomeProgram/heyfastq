@@ -12,7 +12,7 @@ from .paired_reads import (
     map_paired, filter_paired, trim_fixed, kscore_ok,
     )
 
-def random_seqs_subcommand(args):
+def subsample_subcommand(args):
     reads = parse_fastq_paired(args.input)
     out_reads = subsample(reads, args.n)
     write_fastq_paired(args.output, out_reads)
@@ -68,13 +68,13 @@ def heyfastq_main(argv=None):
         help="Minimum komplexity score (default: %(default)s)")
     filter_kscore_parser.set_defaults(func=filter_kscore_subcommand)
     
-    random_seqs_parser = subparsers.add_parser(
-        "random-seqs", parents=[fastq_io_parser],
+    subsample_parser = subparsers.add_parser(
+        "subsample", parents=[fastq_io_parser],
         help='Select random sequences')
-    random_seqs_parser.add_argument(
+    subsample_parser.add_argument(
         "--n", type=int, default=1000,
         help="Number of sequences (default: %(default)s)")
-    random_seqs_parser.set_defaults(func=random_seqs_subcommand)
+    subsample_parser.set_defaults(func=subsample_subcommand)
 
     args = main_parser.parse_args(argv)
     if args.input is None: # pragma: no cover
