@@ -24,7 +24,8 @@ def trimfixed_subcommand(args):
 
 def filter_kscore_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    out_reads = filter_paired(reads, kscore_ok, min_kscore=args.min_kscore)
+    out_reads = filter_paired(
+        reads, kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore)
     write_fastq_paired(args.output, out_reads)
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False)
@@ -60,8 +61,11 @@ def heyfastq_main(argv=None):
         "filter-kscore", parents=[fastq_io_parser],
         help="Filter read pairs by komplexity score")
     filter_kscore_parser.add_argument(
+        "--kmer-size", type=int, default=4,
+        help="Kmer size (default: %(default)s)")
+    filter_kscore_parser.add_argument(
         "--min-kscore", type=float, default=0.55,
-        help="Minimum komplexity score")
+        help="Minimum komplexity score (default: %(default)s)")
     filter_kscore_parser.set_defaults(func=filter_kscore_subcommand)
     
     randomseqs_parser = subparsers.add_parser(

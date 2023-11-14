@@ -4,9 +4,9 @@ def trim_fixed(read, length=100):
     name, seq, qual = read
     return name, seq[:length], qual[:length]
 
-def kscore_ok(read, min_kscore=0.55):
+def kscore_ok(read, k=4, min_kscore=0.55):
     name, seq, qual = read
-    return kscore(seq) >= min_kscore
+    return kscore(seq, k=k) >= min_kscore
 
 def map_paired(paired_reads, f, **kwargs):
     for paired_read in paired_reads:
