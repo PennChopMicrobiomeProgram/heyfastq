@@ -1,4 +1,5 @@
 import argparse
+import operator
 import signal
 import sys
 
@@ -27,7 +28,8 @@ def trim_fixed_subcommand(args):
 
 def filter_length_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    out_reads = filter_paired(reads, length_ok, threshold=args.length)
+    cmp = operator.lt if args.less else operator.ge
+    out_reads = filter_paired(reads, length_ok, threshold=args.length, cmp=cmp)
     write_fastq_paired(args.output, out_reads)
 
 def filter_kscore_subcommand(args):
@@ -62,7 +64,7 @@ def heyfastq_main(argv=None):
         help="Trim sequences to fixed length")
     trim_fixed_parser.add_argument(
         "--length", type=int, default=100,
-        help="Length of output sequences")
+        help="Length of output sequences (default: %(default)s)")
     trim_fixed_parser.set_defaults(func=trim_fixed_subcommand)
 
     filter_length_parser = subparsers.add_parser(
@@ -70,7 +72,12 @@ def heyfastq_main(argv=None):
         help="Filter reads by length")
     filter_length_parser.add_argument(
         "--length", type=int, default=100,
-        help="Length threshold")
+        help="Length threshold (default: %(default)s)")
+    filter_length_parser.add_argument(
+        "--less", action="store_true",
+        help=(
+            "Keep reads that are less than the specified length "
+            "(default: keep greater than or equal to length)"))
     filter_length_parser.set_defaults(func=filter_length_subcommand)
 
     filter_kscore_parser = subparsers.add_parser(
