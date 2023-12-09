@@ -1,5 +1,6 @@
 import random
 
+
 def subsample(xs, n):
     # Reservoir sampling avoids reading input data into memory
     # https://en.wikipedia.org/wiki/Reservoir_sampling
