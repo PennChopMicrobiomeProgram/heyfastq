@@ -23,3 +23,13 @@ classifiers = [
 
 [project.scripts]
 "heyfastq" = "heyfastqlib.command:heyfastq_main"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+dev = [
+    "pytest",
+    "black",
+]
