@@ -5,10 +5,10 @@ def test_parse_fastq():
         "@ab c", "GGCA", "+", "==;G",
         "@d:e:f", "CCGT", "+", "1,4E",
     ]
-    seqs = parse_fastq(f)
-    assert list(seqs) == [
-        ("ab c", "GGCA", "==;G"),
-        ("d:e:f", "CCGT", "1,4E"),
+    reads = parse_fastq(f)
+    assert list(reads) == [
+        Read("ab c", "GGCA", "==;G"),
+        Read("d:e:f", "CCGT", "1,4E"),
     ]
 
 def test_parse_fastq_paired():
@@ -16,8 +16,8 @@ def test_parse_fastq_paired():
     fq2 = ["@a", "AG", "+", "FF", "@b", "TC", "+", "BC"]
     recs = parse_fastq_paired((fq1, fq2))
     assert list(recs) == [
-        (("a", "TA", "GG"), ("a", "AG", "FF")),
-        (("b", "CG", "AB"), ("b", "TC", "BC")),
+        (Read("a", "TA", "GG"), Read("a", "AG", "FF")),
+        (Read("b", "CG", "AB"), Read("b", "TC", "BC")),
     ]
 
 class MockFile:
@@ -29,16 +29,16 @@ class MockFile:
 
 def test_write_fastq():
     f = MockFile()
-    seqs = [("a", "CGT", "BBC"), ("b", "TAC", "CCD")]
-    write_fastq(f, seqs)
+    reads = [Read("a", "CGT", "BBC"), Read("b", "TAC", "CCD")]
+    write_fastq(f, reads)
     assert f.contents == "@a\nCGT\n+\nBBC\n@b\nTAC\n+\nCCD\n"
 
 def test_write_fastq_paired():
     f1 = MockFile()
     f2 = MockFile()
     paired_recs = [
-        (("a", "CGT", "BBC"), ("a", "ACG", "CCD")),
-        (("b", "GTA", "AAB"), ("b", "TAC", "EEF")),
+        (Read("a", "CGT", "BBC"), Read("a", "ACG", "CCD")),
+        (Read("b", "GTA", "AAB"), Read("b", "TAC", "EEF")),
     ]
     write_fastq_paired((f1, f2), paired_recs)
     assert f1.contents == "@a\nCGT\n+\nBBC\n@b\nGTA\n+\nAAB\n"

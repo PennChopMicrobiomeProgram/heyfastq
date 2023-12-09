@@ -9,8 +9,11 @@ from .io import (
     parse_fastq_paired, write_fastq_paired,
 )
 from .paired_reads import (
-    map_paired, filter_paired, trim_fixed, kscore_ok,
+    map_paired, filter_paired
     )
+from .read import (
+    trim, kscore_ok,
+)
 
 def subsample_subcommand(args):
     reads = parse_fastq_paired(args.input)
@@ -19,7 +22,7 @@ def subsample_subcommand(args):
 
 def trim_fixed_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    out_reads = map_paired(reads, trim_fixed, length=args.length)
+    out_reads = map_paired(reads, trim, length=args.length)
     write_fastq_paired(args.output, out_reads)
 
 def filter_kscore_subcommand(args):
