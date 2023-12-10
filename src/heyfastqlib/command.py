@@ -74,7 +74,12 @@ fastq_io_parser.add_argument(
 def heyfastq_main(argv=None):
     # Ignore SIG_PIPE and don't throw exceptions on it
     # newbebweb.blogspot.com/2012/02/python-head-ioerror-errno-32-broken.html
-    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    # Try/catch to not fail on Windows
+    # https://github.com/t2mune/mrtparse/issues/18
+    try:
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:
+        pass
 
     main_parser = argparse.ArgumentParser()
     subparsers = main_parser.add_subparsers(title="Subcommands", required=True)
