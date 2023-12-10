@@ -15,6 +15,9 @@ from .paired_reads import (
 from .read import (
     trim, kscore_ok, length_ok,
 )
+from .argparse_types import (
+    GzipFileType,
+)
 
 def subsample_subcommand(args):
     reads = parse_fastq_paired(args.input)
@@ -40,12 +43,12 @@ def filter_kscore_subcommand(args):
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False)
 fastq_io_parser.add_argument(
-    "--input", type=argparse.FileType('r'), nargs="*", default=[sys.stdin],
+    "--input", type=GzipFileType('r'), nargs="*", default=[sys.stdin],
     help=(
         "Input FASTQ, can specify more than one file for paired reads "
         "(default: stdin)"))
 fastq_io_parser.add_argument(
-    "--output", type=argparse.FileType('w'), nargs="*", default=[sys.stdout],
+    "--output", type=GzipFileType('w'), nargs="*", default=[sys.stdout],
     help=(
         "Output FASTQ, can specify more than one file for paired reads "
         "(default: stdout)"))
