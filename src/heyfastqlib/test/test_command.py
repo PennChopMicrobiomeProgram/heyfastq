@@ -1,3 +1,4 @@
+import gzip
 from heyfastqlib.command import *
 
 def test_command(tmp_path):
@@ -16,6 +17,24 @@ def test_command(tmp_path):
     with open(out1) as f:
         assert f.read() == "@a\nCG\n+\n;=\n@b\nAC\n+\nGG\n"
     with open(out2) as f:
+        assert f.read() == "@a\nAA\n+\n;=\n@b\nCA\n+\nGG\n"
+
+def test_gzip_command(tmp_path):
+    in1 = tmp_path / "input_1.fastq.gz"
+    with gzip.open(in1, "wt") as f:
+        f.write("@a\nCGTT\n+\n;=GG\n@b\nACTG\n+\nGGGG\n")
+    in2 = tmp_path / "input_2.fastq.gz"
+    with gzip.open(in2, "wt") as f:
+        f.write("@a\nAACG\n+\n;=GG\n@b\nCAGT\n+\nGGGG\n")
+    out1 = tmp_path / "output_1.fastq.gz"
+    out2 = tmp_path / "output_2.fastq.gz"
+    heyfastq_main([
+        "trim-fixed", "--length", "2",
+        "--input", str(in1), str(in2),
+        "--output", str(out1), str(out2)])
+    with gzip.open(out1, "rt") as f:
+        assert f.read() == "@a\nCG\n+\n;=\n@b\nAC\n+\nGG\n"
+    with gzip.open(out2, "rt") as f:
         assert f.read() == "@a\nAA\n+\n;=\n@b\nCA\n+\nGG\n"
 
 in1_kscore = """\

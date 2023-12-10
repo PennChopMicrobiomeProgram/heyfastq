@@ -17,10 +17,19 @@ utilities for single or paired FASTQ files.
 
 ## Installation
 
-Download or clone this git repository, navigate to the top-level
-directoy and install with `pip`:
+Install from PyPi with:
 
 ```bash
+pip install heyfastq
+```
+
+Or get the dev version from GitHub:
+
+```bash
+git clone https://github.com/kylebittinger/heyfastq.git
 pip install .
 ```
 
+## Usage
+
+Run `heyfastq -h` to learn more about usage options.
