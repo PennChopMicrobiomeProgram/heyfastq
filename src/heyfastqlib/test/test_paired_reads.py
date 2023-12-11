@@ -6,13 +6,12 @@ reads = [
     (Read("b", "ACGTACGT", "12345678"), Read("b", "ACG", "123")),
 ]
 
+
 def test_map_paired():
     assert list(map_paired(reads, length)) == [(4, 4), (8, 3)]
 
-def test_filter_paired():
-    assert list(filter_paired(reads, length_ok, threshold = 4)) == \
-        reads[:1]
 
-    assert list(
-        filter_paired(reads, length_ok, requirement=any, threshold = 4)
-    ) == reads
+def test_filter_paired():
+    assert list(filter_paired(reads, length_ok, threshold=4)) == reads[:1]
+
+    assert list(filter_paired(reads, length_ok, requirement=any, threshold=4)) == reads

@@ -9,11 +9,13 @@ def test_qvals():
     assert qvals(Read("a", "ACGT", "!.:@F")) == [0, 13, 25, 31, 37]
 
 def test_trim():
-    assert trim(Read("myseq", "ACGTAC", "123456"), 4) == \
-        Read("myseq", "ACGT", "1234")
+    assert trim(Read("myseq", "ACGTAC", "123456"), 4) == Read("myseq", "ACGT", "1234")
+
+def test_length():
+    assert length(Read("a", "ATCGC", "12345")) == 5
 
 def test_kscore_ok():
-    obs = Read("a", "AAAAC", "12345") # kscore = 2 / 5 = 0.2
+    obs = Read("a", "AAAAC", "12345")  # kscore = 2 / 5 = 0.2
     assert not kscore_ok(obs, min_kscore=0.5)
     assert kscore_ok(obs, min_kscore=0.1)
 

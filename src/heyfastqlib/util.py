@@ -2,6 +2,7 @@ import collections
 import itertools
 import random
 
+
 def subsample(xs, n):
     # https://en.wikipedia.org/wiki/Reservoir_sampling
     reservoir = [None for _ in range(n)]

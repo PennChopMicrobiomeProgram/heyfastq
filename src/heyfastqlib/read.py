@@ -4,11 +4,13 @@ import operator
 from .seqs import kscore
 from .util import sliding_sum
 
+
 @dataclass(slots=True)
 class Read:
     desc: str
     seq: str
     qual: str
+
 
 def length(read):
     return len(read.seq)

@@ -2,6 +2,7 @@ import gzip
 import sys
 from argparse import ArgumentTypeError
 
+
 class GzipFileType(object):
     """Factory for creating optionally gzipped file object types
 
@@ -21,7 +22,7 @@ class GzipFileType(object):
             be handled. Accepts the same value as the builtin open() function.
     """
 
-    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
+    def __init__(self, mode="r", bufsize=-1, encoding=None, errors=None):
         self._mode = mode
         self._bufsize = bufsize
         self._encoding = encoding
@@ -29,11 +30,11 @@ class GzipFileType(object):
 
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
-        if string == '-':
-            if 'r' in self._mode:
-                return sys.stdin.buffer if 'b' in self._mode else sys.stdin
-            elif any(c in self._mode for c in 'wax'):
-                return sys.stdout.buffer if 'b' in self._mode else sys.stdout
+        if string == "-":
+            if "r" in self._mode:
+                return sys.stdin.buffer if "b" in self._mode else sys.stdin
+            elif any(c in self._mode for c in "wax"):
+                return sys.stdout.buffer if "b" in self._mode else sys.stdout
             else:
                 msg = f'argument "-" with mode {self.mode}'
                 raise ValueError(msg)
@@ -41,28 +42,35 @@ class GzipFileType(object):
         # all other arguments are used as file names
         try:
             try:
-                with open(string, 'rb') as test_f:
-                    gzipped = test_f.read(2) == b'\x1f\x8b'
+                with open(string, "rb") as test_f:
+                    gzipped = test_f.read(2) == b"\x1f\x8b"
             except FileNotFoundError:
                 gzipped = string.endswith(".gz")
-                
+
             if gzipped:
-                f = gzip.open(string, f"{self._mode}t", self._bufsize, self._encoding,
-                        self._errors)
+                f = gzip.open(
+                    string,
+                    f"{self._mode}t",
+                    self._bufsize,
+                    self._encoding,
+                    self._errors,
+                )
             else:
-                f = open(string, self._mode, self._bufsize, self._encoding,
-                        self._errors)
-            
+                f = open(
+                    string, self._mode, self._bufsize, self._encoding, self._errors
+                )
+
             return f
         except OSError as e:
-            args = {'filename': string, 'error': e}
+            args = {"filename": string, "error": e}
             message = f"can't open {args['filename']}: {args['error']}"
             raise ArgumentTypeError(message % args)
 
     def __repr__(self):
         args = self._mode, self._bufsize
-        kwargs = [('encoding', self._encoding), ('errors', self._errors)]
-        args_str = ', '.join([repr(arg) for arg in args if arg != -1] +
-                             ['%s=%r' % (kw, arg) for kw, arg in kwargs
-                              if arg is not None])
-        return '%s(%s)' % (type(self).__name__, args_str)
+        kwargs = [("encoding", self._encoding), ("errors", self._errors)]
+        args_str = ", ".join(
+            [repr(arg) for arg in args if arg != -1]
+            + ["%s=%r" % (kw, arg) for kw, arg in kwargs if arg is not None]
+        )
+        return "%s(%s)" % (type(self).__name__, args_str)
