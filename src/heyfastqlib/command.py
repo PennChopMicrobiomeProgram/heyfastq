@@ -13,7 +13,7 @@ from .paired_reads import (
     map_paired, filter_paired
     )
 from .read import (
-    trim, kscore_ok, length_ok,
+    trim, kscore_ok, length_ok, trim_moving_average,
 )
 from .argparse_types import (
     GzipFileType,
@@ -28,6 +28,14 @@ def trim_fixed_subcommand(args):
     reads = parse_fastq_paired(args.input)
     out_reads = map_paired(reads, trim, length=args.length)
     write_fastq_paired(args.output, out_reads)
+
+def trim_qual_subcommand(args):
+    reads = parse_fastq_paired(args.input)
+    trimmed_reads = map_paired(
+        reads, trim_moving_average, k=args.window_width, threshold=args.window_threshold)
+    filtered_reads = filter_paired(
+        trimmed_reads, length_ok, threshold=args.min_length)
+    write_fastq_paired(args.output, filtered_reads)
 
 def filter_length_subcommand(args):
     reads = parse_fastq_paired(args.input)
@@ -58,7 +66,8 @@ def heyfastq_main(argv=None):
     # newbebweb.blogspot.com/2012/02/python-head-ioerror-errno-32-broken.html
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
-    main_parser = argparse.ArgumentParser()
+    main_parser = argparse.ArgumentParser(
+    )
     subparsers = main_parser.add_subparsers(
         title="Subcommands", required=True)
 
@@ -70,6 +79,20 @@ def heyfastq_main(argv=None):
         help="Length of output sequences (default: %(default)s)")
     trim_fixed_parser.set_defaults(func=trim_fixed_subcommand)
 
+    trim_qual_parser = subparsers.add_parser(
+        "trim-qual", parents=[fastq_io_parser],
+        formatter_class=HFQFormatter,
+        help="Trim reads based on quality scores")
+    trim_qual_parser.add_argument(
+        "--window-width", type=int, default=4,
+        help="Sliding window width")
+    trim_qual_parser.add_argument(
+        "--window-threshold", type=float, default=15,
+        help="Sliding window mean quality threshold")
+    trim_qual_parser.add_argument(
+        "--min-length", type=int, default=36,
+        help="Minimum length after quality trimming")
+    trim_qual_parser.set_defaults(func=trim_qual_subcommand)
     filter_length_parser = subparsers.add_parser(
         "filter-length", parents=[fastq_io_parser],
         help="Filter reads by length")
@@ -108,3 +131,17 @@ def heyfastq_main(argv=None):
     if args.output is None: # pragma: no cover
         args.output = sys.stdout
     args.func(args)
+
+class HFQFormatter(argparse.HelpFormatter):
+    # based on ArgumentDefaultsHelpFormatter but with a different search string
+    def _get_help_string(self, action):
+        help = action.help
+        if help is None:
+            help = ''
+
+        if "default" not in help:
+            if action.default is not argparse.SUPPRESS:
+                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    help += ' (default: %(default)s)'
+        return help

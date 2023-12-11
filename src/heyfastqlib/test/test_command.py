@@ -37,6 +37,31 @@ def test_gzip_command(tmp_path):
     with gzip.open(out2, "rt") as f:
         assert f.read() == "@a\nAA\n+\n;=\n@b\nCA\n+\nGG\n"
 
+def test_trim_qual_command(tmp_path):
+    in1 = tmp_path / "input_1.fastq"
+    with open(in1, "w") as f:
+        f.write("@a\nACGTACGTGGGGGGGG\n+\n55555555&&&&&&&&")
+    in2 = tmp_path / "input_2.fastq"
+    with open(in2, "w") as f:
+        f.write("@a\nCGTTCGTTAAAAAAAA\n+\n55555555!!!!!!!!")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+    heyfastq_main([
+        "trim-qual",
+        "--window-width", "4",
+        "--window-threshold", "7",
+        "--min-length", "4",
+        "--input", str(in1), str(in2),
+        "--output", str(out1), str(out2)])
+    with open(out1) as f:
+        # Final Q20 base passes
+        # mean([20, 5, 5, 5]) = 8.75
+        assert f.read() == "@a\nACGTACGT\n+\n55555555\n"
+    with open(out2) as f:
+        # Final Q20 base fails
+        # mean([20, 0, 0, 0]) = 5
+        assert f.read() == "@a\nCGTTCGT\n+\n5555555\n"
+
 in1_kscore = """\
 @a
 AAAATAAAAAAAAAA
