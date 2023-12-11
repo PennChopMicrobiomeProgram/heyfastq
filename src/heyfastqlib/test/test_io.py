@@ -1,15 +1,23 @@
 from heyfastqlib.io import *
 
+
 def test_parse_fastq():
     f = [
-        "@ab c", "GGCA", "+", "==;G",
-        "@d:e:f", "CCGT", "+", "1,4E",
+        "@ab c",
+        "GGCA",
+        "+",
+        "==;G",
+        "@d:e:f",
+        "CCGT",
+        "+",
+        "1,4E",
     ]
     reads = parse_fastq(f)
     assert list(reads) == [
         Read("ab c", "GGCA", "==;G"),
         Read("d:e:f", "CCGT", "1,4E"),
     ]
+
 
 def test_parse_fastq_paired():
     fq1 = ["@a", "TA", "+", "GG", "@b", "CG", "+", "AB"]
@@ -20,6 +28,7 @@ def test_parse_fastq_paired():
         (Read("b", "CG", "AB"), Read("b", "TC", "BC")),
     ]
 
+
 class MockFile:
     def __init__(self):
         self.contents = ""
@@ -27,11 +36,13 @@ class MockFile:
     def write(self, x):
         self.contents += x
 
+
 def test_write_fastq():
     f = MockFile()
     reads = [Read("a", "CGT", "BBC"), Read("b", "TAC", "CCD")]
     write_fastq(f, reads)
     assert f.contents == "@a\nCGT\n+\nBBC\n@b\nTAC\n+\nCCD\n"
+
 
 def test_write_fastq_paired():
     f1 = MockFile()
