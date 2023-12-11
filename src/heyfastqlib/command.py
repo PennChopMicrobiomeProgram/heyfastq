@@ -1,4 +1,5 @@
 import argparse
+import operator
 import signal
 import sys
 
@@ -9,8 +10,11 @@ from .io import (
     parse_fastq_paired, write_fastq_paired,
 )
 from .paired_reads import (
-    map_paired, filter_paired, trim_fixed, kscore_ok,
+    map_paired, filter_paired
     )
+from .read import (
+    trim, kscore_ok, length_ok,
+)
 from .argparse_types import (
     GzipFileType,
 )
@@ -22,7 +26,13 @@ def subsample_subcommand(args):
 
 def trim_fixed_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    out_reads = map_paired(reads, trim_fixed, length=args.length)
+    out_reads = map_paired(reads, trim, length=args.length)
+    write_fastq_paired(args.output, out_reads)
+
+def filter_length_subcommand(args):
+    reads = parse_fastq_paired(args.input)
+    cmp = operator.lt if args.less else operator.ge
+    out_reads = filter_paired(reads, length_ok, threshold=args.length, cmp=cmp)
     write_fastq_paired(args.output, out_reads)
 
 def filter_kscore_subcommand(args):
@@ -57,8 +67,21 @@ def heyfastq_main(argv=None):
         help="Trim sequences to fixed length")
     trim_fixed_parser.add_argument(
         "--length", type=int, default=100,
-        help="Length of output sequences")
+        help="Length of output sequences (default: %(default)s)")
     trim_fixed_parser.set_defaults(func=trim_fixed_subcommand)
+
+    filter_length_parser = subparsers.add_parser(
+        "filter-length", parents=[fastq_io_parser],
+        help="Filter reads by length")
+    filter_length_parser.add_argument(
+        "--length", type=int, default=100,
+        help="Length threshold (default: %(default)s)")
+    filter_length_parser.add_argument(
+        "--less", action="store_true",
+        help=(
+            "Keep reads that are less than the specified length "
+            "(default: keep greater than or equal to length)"))
+    filter_length_parser.set_defaults(func=filter_length_subcommand)
 
     filter_kscore_parser = subparsers.add_parser(
         "filter-kscore", parents=[fastq_io_parser],

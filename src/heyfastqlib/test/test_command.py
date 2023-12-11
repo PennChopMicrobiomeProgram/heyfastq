@@ -77,4 +77,42 @@ def test_filter_kscore_command(tmp_path):
     with open(out2) as f:
         assert f.read() == "@b\nGCTGAGCTACGGTC\n+\n==============\n"
 
-    
+in1_length = """\
+@a
+ACGTACGTACGT
++
+123456789012
+@b
+AAGGC
++
+12345
+"""
+
+in2_length = """\
+@a
+AGGTCGTCTAAC
++
+123456789012
+@b
+AGCTGCTACGCTA
++
+1234567890123
+"""
+
+def test_filter_length_command(tmp_path):
+    in1 = tmp_path / "input_1.fastq"
+    with open(in1, "w") as f:
+        f.write(in1_length)
+    in2 = tmp_path / "input_2.fastq"
+    with open(in2, "w") as f:
+        f.write(in2_length)
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+    heyfastq_main([
+        "filter-length", "--length", "6",
+        "--input", str(in1), str(in2),
+        "--output", str(out1), str(out2)])
+    with open(out1) as f:
+        assert f.read() == "@a\nACGTACGTACGT\n+\n123456789012\n"
+    with open(out2) as f:
+        assert f.read() == "@a\nAGGTCGTCTAAC\n+\n123456789012\n"
