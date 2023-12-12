@@ -21,9 +21,9 @@ def qvals(read, offset=33):
 
 
 def trim(read, length=100):
-    read.seq = read.seq[:length]
-    read.qual = read.qual[:length]
-    return read
+    seq = read.seq[:length]
+    qual = read.qual[:length]
+    return Read(read.desc, seq, qual)
 
 
 def kscore_ok(read, k=4, min_kscore=0.55):

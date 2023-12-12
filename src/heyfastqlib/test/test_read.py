@@ -21,6 +21,12 @@ def test_trim():
     assert trim(Read("myseq", "ACGTAC", "123456"), 4) == Read("myseq", "ACGT", "1234")
 
 
+def test_trim_returns_copy():
+    a = Read("a", "ACGG", "FFFF")
+    assert length(trim(a, 2)) == 2
+    assert length(a) == 4
+
+
 def test_length():
     assert length(Read("a", "ATCGC", "12345")) == 5
 
@@ -52,7 +58,7 @@ def test_trim_moving_average_endcaps():
     # Within window, keep idx 2, 3
     # Trim at 4
     a = Read("a", "ACGTAAAAAAAA", "IIII!!!!!!!!")
-    assert trim_moving_average(a, 4, 25) == Read("a", "ACGT", "IIII")
+    assert trim_moving_average(a, 4, 25) == trim(a, 4)
 
     # idx   0  1  2  3  4  5 6 7 8 9
     # qual 40 40 40 40  0 40 0 0 0 0
@@ -63,7 +69,7 @@ def test_trim_moving_average_endcaps():
     # Within window, keep 3, 4, 5
     # Trim at 6
     b = Read("b", "CGTTCCCCCCCC", "IIII!I!!!!!!")
-    assert trim_moving_average(b, 4, 25) == Read("b", "CGTTCC", "IIII!I")
+    assert trim_moving_average(b, 4, 25) == trim(b, 6)
 
     # idx   0  1  2  3  4  5  6 7 8 9
     # qual 40 40 40 40  0  0 40 0 0 0
@@ -74,7 +80,7 @@ def test_trim_moving_average_endcaps():
     # Within window, keep 2, 3
     # Trim at 4
     c = Read("c", "GCGGACGTCGGG", "IIII!!I!!!!!")
-    assert trim_moving_average(c, 4, 25) == Read("c", "GCGG", "IIII")
+    assert trim_moving_average(c, 4, 25) == trim(c, 4)
 
     # idx   0  1  2  3  4  5  6 7 8 9
     # qual 40 40 40 40  0  0 40 0 0 0
@@ -85,4 +91,4 @@ def test_trim_moving_average_endcaps():
     # Within window, keep 4, 5, 6
     # Trim at 7
     d = Read("d", "GCGGACGTCGGG", "IIII!!I!!!!!")
-    assert trim_moving_average(d, 4, 15) == Read("d", "GCGGACG", "IIII!!I")
+    assert trim_moving_average(d, 4, 15) == trim(d, 7)
