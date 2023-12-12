@@ -20,9 +20,9 @@ def qvals(read, offset=33):
     return [ord(x) - offset for x in read.qual]
 
 
-def trim(read, length=100, start=0):
-    seq = read.seq[start:length]
-    qual = read.qual[start:length]
+def trim(read, start_idx=0, end_idx=100):
+    seq = read.seq[start_idx:end_idx]
+    qual = read.qual[start_idx:end_idx]
     return Read(read.desc, seq, qual)
 
 
@@ -39,12 +39,12 @@ def trim_moving_average(read, k=4, threshold=15):
     qs = qvals(read)
     for window_idx, window_sum in enumerate(sliding_sum(qs, k=k)):
         if window_sum < window_sum_threshold:
-            trim_idx = window_idx
+            end_idx = window_idx
             # Extend to include last qval in window meeting threshold
             for extended_idx in range(window_idx, window_idx + k):
                 if qs[extended_idx] >= threshold:
-                    trim_idx = extended_idx + 1
-            return trim(read, trim_idx)
+                    end_idx = extended_idx + 1
+            return trim(read, end_idx=end_idx)
     return read
 
 
@@ -65,6 +65,6 @@ def trim_ends(read, threshold_start=3, threshold_end=3):
     if (trim_start == 0) and (trim_end == 0):
         return read
     else:
-        idx_start = trim_start
-        idx_end = length(read) - trim_end
-        return trim(read, idx_end, idx_start)
+        start_idx = trim_start
+        end_idx = length(read) - trim_end
+        return trim(read, start_idx=start_idx, end_idx=end_idx)

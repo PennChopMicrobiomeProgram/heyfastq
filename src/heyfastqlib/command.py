@@ -31,7 +31,7 @@ def subsample_subcommand(args):
 
 def trim_fixed_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    out_reads = map_paired(reads, trim, length=args.length)
+    out_reads = map_paired(reads, trim, end_idx=args.length)
     write_fastq_paired(args.output, out_reads)
 
 
