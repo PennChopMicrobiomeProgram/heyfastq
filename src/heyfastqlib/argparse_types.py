@@ -1,6 +1,6 @@
 import gzip
 import sys
-from argparse import ArgumentTypeError
+import argparse
 
 
 class GzipFileType(object):
@@ -64,7 +64,7 @@ class GzipFileType(object):
         except OSError as e:
             args = {"filename": string, "error": e}
             message = f"can't open {args['filename']}: {args['error']}"
-            raise ArgumentTypeError(message % args)
+            raise argparse.ArgumentTypeError(message % args)
 
     def __repr__(self):
         args = self._mode, self._bufsize
@@ -74,3 +74,21 @@ class GzipFileType(object):
             + ["%s=%r" % (kw, arg) for kw, arg in kwargs if arg is not None]
         )
         return "%s(%s)" % (type(self).__name__, args_str)
+
+
+class HFQFormatter(argparse.HelpFormatter):
+    def __init__(self, prog, indent_increment=2, max_help_position=25, width=None):
+        super().__init__(prog, indent_increment, max_help_position, width)
+
+    # based on ArgumentDefaultsHelpFormatter but with a different search string
+    def _get_help_string(self, action):
+        help = action.help
+        if help is None:
+            help = ""
+
+        if "default" not in help:
+            if action.default is not argparse.SUPPRESS:
+                defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
+                if action.option_strings or action.nargs in defaulting_nargs:
+                    help += " (default: %(default)s)"
+        return help
