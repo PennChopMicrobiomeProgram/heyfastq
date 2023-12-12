@@ -2,6 +2,7 @@ import random
 
 from heyfastqlib import util
 
+
 def test_subsample():
     xs = ["a", "b", "c", "d", "e", "f"]
     # sampling less than or equal to n is original list
@@ -11,7 +12,7 @@ def test_subsample():
     # they should be in their original position
     assert util.subsample(xs, n=3) == ["f", "b", "c"]
 
+
 def test_sliding_sum():
     xs = [1, 2, 3, 4, 5]
     assert list(util.sliding_sum(xs, 3)) == [6, 9, 12]
-

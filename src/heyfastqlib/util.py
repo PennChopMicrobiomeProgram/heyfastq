@@ -15,6 +15,7 @@ def subsample(xs, n):
                 reservoir[idx] = x
     return reservoir
 
+
 def sliding_sum(xs, k=4):
     # From moving_average recipe in Python docs
     xs = iter(xs)

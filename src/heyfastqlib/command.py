@@ -33,13 +33,15 @@ def trim_fixed_subcommand(args):
     out_reads = map_paired(reads, trim, length=args.length)
     write_fastq_paired(args.output, out_reads)
 
+
 def trim_qual_subcommand(args):
     reads = parse_fastq_paired(args.input)
     trimmed_reads = map_paired(
-        reads, trim_moving_average, k=args.window_width, threshold=args.window_threshold)
-    filtered_reads = filter_paired(
-        trimmed_reads, length_ok, threshold=args.min_length)
+        reads, trim_moving_average, k=args.window_width, threshold=args.window_threshold
+    )
+    filtered_reads = filter_paired(trimmed_reads, length_ok, threshold=args.min_length)
     write_fastq_paired(args.output, filtered_reads)
+
 
 def filter_length_subcommand(args):
     reads = parse_fastq_paired(args.input)
@@ -104,18 +106,26 @@ def heyfastq_main(argv=None):
     trim_fixed_parser.set_defaults(func=trim_fixed_subcommand)
 
     trim_qual_parser = subparsers.add_parser(
-        "trim-qual", parents=[fastq_io_parser],
+        "trim-qual",
+        parents=[fastq_io_parser],
         formatter_class=HFQFormatter,
-        help="Trim reads based on quality scores")
+        help="Trim reads based on quality scores",
+    )
     trim_qual_parser.add_argument(
-        "--window-width", type=int, default=4,
-        help="Sliding window width")
+        "--window-width", type=int, default=4, help="Sliding window width"
+    )
     trim_qual_parser.add_argument(
-        "--window-threshold", type=float, default=15,
-        help="Sliding window mean quality threshold")
+        "--window-threshold",
+        type=float,
+        default=15,
+        help="Sliding window mean quality threshold",
+    )
     trim_qual_parser.add_argument(
-        "--min-length", type=int, default=36,
-        help="Minimum length after quality trimming")
+        "--min-length",
+        type=int,
+        default=36,
+        help="Minimum length after quality trimming",
+    )
     trim_qual_parser.set_defaults(func=trim_qual_subcommand)
     filter_length_parser = subparsers.add_parser(
         "filter-length", parents=[fastq_io_parser], help="Filter reads by length"
@@ -167,16 +177,17 @@ def heyfastq_main(argv=None):
         args.output = sys.stdout
     args.func(args)
 
+
 class HFQFormatter(argparse.HelpFormatter):
     # based on ArgumentDefaultsHelpFormatter but with a different search string
     def _get_help_string(self, action):
         help = action.help
         if help is None:
-            help = ''
+            help = ""
 
         if "default" not in help:
             if action.default is not argparse.SUPPRESS:
                 defaulting_nargs = [argparse.OPTIONAL, argparse.ZERO_OR_MORE]
                 if action.option_strings or action.nargs in defaulting_nargs:
-                    help += ' (default: %(default)s)'
+                    help += " (default: %(default)s)"
         return help
