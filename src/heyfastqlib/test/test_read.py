@@ -6,6 +6,7 @@ from heyfastqlib.read import (
     kscore_ok,
     length_ok,
     trim_moving_average,
+    trim_ends,
 )
 
 
@@ -92,3 +93,13 @@ def test_trim_moving_average_endcaps():
     # Trim at 7
     d = Read("d", "GCGGACGTCGGG", "IIII!!I!!!!!")
     assert trim_moving_average(d, 4, 15) == trim(d, 7)
+
+
+def test_trim_ends():
+    a = Read("bf", "ACGTACGT", "&!FFF!.&")
+    # idx  0 1  2  3  4 5  6 7
+    # qual 5 0 37 37 37 0 13 5
+    # q20  - -  +  +  + -  - - Trim 2:5
+    # q6   - -  +  +  + -  + - Trim 2:7
+    assert trim_ends(a, 20, 20) == trim(a, 5, 2)
+    assert trim_ends(a, 6, 6) == trim(a, 7, 2)
