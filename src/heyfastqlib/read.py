@@ -30,11 +30,14 @@ def length_ok(read, threshold=100, cmp=operator.ge):
     return cmp(length(read), threshold)
 
 def trim_moving_average(read, k=4, threshold=15):
-    sum_threshold = threshold * k
+    window_sum_threshold = threshold * k
     qs = qvals(read)
-    for i, s in enumerate(sliding_sum(qs, k=k)):
-        if s < sum_threshold:
-            # trimmomatic also trims values from the end where the
-            # per-base quality is less than the threshold
-            return trim(read, i)
+    for window_idx, window_sum in enumerate(sliding_sum(qs, k=k)):
+        if window_sum < window_sum_threshold:
+            trim_idx = window_idx
+            # Extend to include last qval in window meeting threshold
+            for extended_idx in range(window_idx, window_idx + k):
+                if qs[extended_idx] >= threshold:
+                    trim_idx = extended_idx + 1
+            return trim(read, trim_idx)
     return read

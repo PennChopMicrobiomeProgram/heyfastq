@@ -78,9 +78,9 @@ def test_trim_qual_command(tmp_path):
         # mean([20, 5, 5, 5]) = 8.75
         assert f.read() == "@a\nACGTACGT\n+\n55555555\n"
     with open(out2) as f:
-        # Final Q20 base fails
+        # Final Q20 base fails, but is added in extension
         # mean([20, 0, 0, 0]) = 5
-        assert f.read() == "@a\nCGTTCGT\n+\n5555555\n"
+        assert f.read() == "@a\nCGTTCGTT\n+\n55555555\n"
 
 in1_kscore = """\
 @a
