@@ -16,6 +16,7 @@ from .read import (
     kscore_ok,
     length_ok,
     trim_moving_average,
+    trim_ends,
 )
 from .argparse_types import (
     GzipFileType,
@@ -36,10 +37,18 @@ def trim_fixed_subcommand(args):
 
 def trim_qual_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    trimmed_reads = map_paired(
+    trimmed_moving_average_reads = map_paired(
         reads, trim_moving_average, k=args.window_width, threshold=args.window_threshold
     )
-    filtered_reads = filter_paired(trimmed_reads, length_ok, threshold=args.min_length)
+    trimmed_ends_reads = map_paired(
+        trimmed_moving_average_reads,
+        trim_ends,
+        threshold_start=args.start_threshold,
+        threshold_end=args.end_threshold,
+    )
+    filtered_reads = filter_paired(
+        trimmed_ends_reads, length_ok, threshold=args.min_length
+    )
     write_fastq_paired(args.output, filtered_reads)
 
 
@@ -121,12 +130,25 @@ def heyfastq_main(argv=None):
         help="Sliding window mean quality threshold",
     )
     trim_qual_parser.add_argument(
+        "--start-threshold",
+        type=float,
+        default=3,
+        help="Quality threshold at start of read",
+    )
+    trim_qual_parser.add_argument(
+        "--end-threshold",
+        type=float,
+        default=3,
+        help="Quality threshold at end of read",
+    )
+    trim_qual_parser.add_argument(
         "--min-length",
         type=int,
         default=36,
         help="Minimum length after quality trimming",
     )
     trim_qual_parser.set_defaults(func=trim_qual_subcommand)
+
     filter_length_parser = subparsers.add_parser(
         "filter-length", parents=[fastq_io_parser], help="Filter reads by length"
     )
