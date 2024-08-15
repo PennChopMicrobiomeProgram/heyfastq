@@ -199,11 +199,13 @@ def heyfastq_main(argv=None):
         help="Filter reads by sequence id",
     )
     filter_seq_ids_parser.add_argument(
-        "idsfile", type=argparse.FileType("r"),
-        help="File containing sequence ids, one per line"
+        "idsfile",
+        type=argparse.FileType("r"),
+        help="File containing sequence ids, one per line",
     )
     filter_seq_ids_parser.add_argument(
-        "--keep-ids", action="store_true",
+        "--keep-ids",
+        action="store_true",
         help="Keep, rather than remove ids in list",
     )
     filter_seq_ids_parser.set_defaults(func=filter_seq_ids_subcommand)
