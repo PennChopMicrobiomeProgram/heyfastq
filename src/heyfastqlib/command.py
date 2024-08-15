@@ -9,12 +9,14 @@ from .util import (
 from .io import (
     parse_fastq_paired,
     write_fastq_paired,
+    parse_seq_ids,
 )
 from .paired_reads import map_paired, filter_paired
 from .read import (
     trim,
     kscore_ok,
     length_ok,
+    seq_id_ok,
     trim_moving_average,
     trim_ends,
 )
@@ -62,6 +64,13 @@ def filter_kscore_subcommand(args):
     out_reads = filter_paired(
         reads, kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore
     )
+    write_fastq_paired(args.output, out_reads)
+
+
+def filter_seq_ids_subcommand(args):
+    seq_ids = set(parse_seq_ids(args.idsfile))
+    reads = parse_fastq_paired(args.input)
+    out_reads = filter_paired(reads, seq_id_ok, seq_ids=seq_ids, keep=args.keep_ids)
     write_fastq_paired(args.output, out_reads)
 
 
@@ -182,6 +191,22 @@ def heyfastq_main(argv=None):
         help="Minimum komplexity score",
     )
     filter_kscore_parser.set_defaults(func=filter_kscore_subcommand)
+
+    filter_seq_ids_parser = subparsers.add_parser(
+        "filter-seqids",
+        parents=[fastq_io_parser],
+        formatter_class=HFQFormatter,
+        help="Filter reads by sequence id",
+    )
+    filter_seq_ids_parser.add_argument(
+        "idsfile", type=argparse.FileType("r"),
+        help="File containing sequence ids, one per line"
+    )
+    filter_seq_ids_parser.add_argument(
+        "--keep-ids", action="store_true",
+        help="Keep, rather than remove ids in list",
+    )
+    filter_seq_ids_parser.set_defaults(func=filter_seq_ids_subcommand)
 
     subsample_parser = subparsers.add_parser(
         "subsample",

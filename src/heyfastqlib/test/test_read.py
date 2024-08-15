@@ -105,6 +105,6 @@ def test_trim_ends():
 
 def test_seq_id_ok():
     ids = ["cd", "b"]
-    assert seq_id_ok(Read("b", "GGC", "FFF"), ids)
-    assert not seq_id_ok(Read("a", "TCG", "FFF"), ids)
-    assert not seq_id_ok(Read("cd", "TCG", "!!!"), ids, remove=True)
+    assert not seq_id_ok(Read("b", "GGC", "FFF"), ids)
+    assert seq_id_ok(Read("a", "TCG", "FFF"), ids)
+    assert seq_id_ok(Read("cd", "TCG", "!!!"), ids, keep=True)

@@ -38,12 +38,12 @@ def length_ok(read, threshold=100, cmp=operator.ge):
     return cmp(length(read), threshold)
 
 
-def seq_id_ok(read, seq_ids, remove=False):
+def seq_id_ok(read, seq_ids, keep=False):
     id = seq_id(read)
-    if remove:
-        return id not in seq_ids
-    else:
+    if keep:
         return id in seq_ids
+    else:
+        return id not in seq_ids
 
 
 def trim_moving_average(read, k=4, threshold=15):
