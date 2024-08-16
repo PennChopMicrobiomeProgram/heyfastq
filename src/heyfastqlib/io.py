@@ -32,3 +32,12 @@ def write_fastq_paired(fs, paired_recs):
     for paired_rec in paired_recs:
         for f, read in zip(fs, paired_rec):
             f.write("@{0}\n{1}\n+\n{2}\n".format(read.desc, read.seq, read.qual))
+
+
+def parse_seq_ids(f):
+    for line in f:
+        line = line.strip()
+        if line.startswith("#") or (line == ""):
+            continue
+        seq_id = line.split()[0]
+        yield seq_id

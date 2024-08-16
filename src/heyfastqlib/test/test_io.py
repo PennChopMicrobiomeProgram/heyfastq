@@ -54,3 +54,8 @@ def test_write_fastq_paired():
     write_fastq_paired((f1, f2), paired_recs)
     assert f1.contents == "@a\nCGT\n+\nBBC\n@b\nGTA\n+\nAAB\n"
     assert f2.contents == "@a\nACG\n+\nCCD\n@b\nTAC\n+\nEEF\n"
+
+
+def test_parse_seq_ids():
+    f = ["Id1\n", "\tId2|345 678  \n", "   ", "   # a comment", "  id3"]
+    assert list(parse_seq_ids(f)) == ["Id1", "Id2|345", "id3"]

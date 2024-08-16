@@ -7,6 +7,7 @@ from heyfastqlib.read import (
     length_ok,
     trim_moving_average,
     trim_ends,
+    seq_id_ok,
 )
 
 
@@ -100,3 +101,10 @@ def test_trim_ends():
     # q6   - -  +  +  + -  + - Trim 2:7
     assert trim_ends(a, 20, 20) == trim(a, 2, 5)
     assert trim_ends(a, 6, 6) == trim(a, 2, 7)
+
+
+def test_seq_id_ok():
+    ids = ["cd", "b"]
+    assert not seq_id_ok(Read("b", "GGC", "FFF"), ids)
+    assert seq_id_ok(Read("a", "TCG", "FFF"), ids)
+    assert seq_id_ok(Read("cd", "TCG", "!!!"), ids, keep=True)
