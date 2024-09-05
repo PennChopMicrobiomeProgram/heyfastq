@@ -25,7 +25,7 @@ jobs:
           python -m pip install .
 
       - name: Run tests and collect coverage
-        run: pytest --cov tests
+        run: pytest --cov src/heyfastqlib/test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -52,7 +52,7 @@ jobs:
           python -m pip install .
 
       - name: Run tests
-        run: pytest -s -vvvv -l --tb=long tests
+        run: pytest -s -vvvv -l --tb=long src/heyfastqlib/test
 
   lint:
     name: Lint Code Base
