@@ -4,6 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heyfastq"
+dynamic = ["version"]
 authors = [
   { name="Kyle Bittinger", email="kylebittinger@gmail.com" },
 ]
