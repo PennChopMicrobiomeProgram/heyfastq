@@ -4,7 +4,6 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heyfastq"
-version = "0.0.1"
 authors = [
   { name="Kyle Bittinger", email="kylebittinger@gmail.com" },
 ]
@@ -33,3 +32,6 @@ dev = [
     "pytest",
     "black",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "heyfastq.__version__"}

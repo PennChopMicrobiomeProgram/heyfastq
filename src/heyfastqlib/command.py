@@ -3,6 +3,7 @@ import operator
 import signal
 import sys
 
+from . import __version__
 from .util import (
     subsample,
 )
@@ -102,6 +103,12 @@ def heyfastq_main(argv=None):
         pass
 
     main_parser = argparse.ArgumentParser()
+    main_parser.add_argument(
+        "-v",
+        "--version",
+        action="version",
+        version=f"{__version__}",
+    )
     subparsers = main_parser.add_subparsers(title="Subcommands", required=True)
 
     trim_fixed_parser = subparsers.add_parser(
