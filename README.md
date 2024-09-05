@@ -1,9 +1,7 @@
 # heyfastq
 
 <!-- Badges start -->
-[![Tests](https://github.com/kylebittinger/heyfastq/actions/workflows/tests.yml/badge.svg)](https://github.com/kylebittinger/heyfastq/actions/workflows/tests.yml)
-[![Super-Linter](https://github.com/kylebittinger/heyfastq/actions/workflows/linter.yml/badge.svg)](https://github.com/kylebittinger/heyfastq/actions/workflows/linter.yml)
-[![Codacy Analysis](https://github.com/kylebittinger/heyfastq/actions/workflows/codacy-analysis.yml/badge.svg)](https://github.com/kylebittinger/heyfastq/actions/workflows/codacy-analysis.yml)
+[![Tests](https://github.com/kylebittinger/heyfastq/actions/workflows/pr.yml/badge.svg)](https://github.com/kylebittinger/heyfastq/actions/workflows/pr.yml)
 [![PyPI version](https://badge.fury.io/py/heyfastq.svg)](https://pypi.org/project/heyfastq/)
 <!-- Badges end -->
 
