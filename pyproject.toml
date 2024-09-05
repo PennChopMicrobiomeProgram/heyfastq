@@ -35,4 +35,4 @@ dev = [
 ]
 
 [tool.setuptools.dynamic]
-version = {attr = "heyfastq.__version__"}
+version = {attr = "heyfastqlib.__version__"}
