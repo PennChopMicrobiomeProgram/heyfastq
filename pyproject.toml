@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "heyfastq"
-version = "0.0.1"
+dynamic = ["version"]
 authors = [
   { name="Kyle Bittinger", email="kylebittinger@gmail.com" },
 ]
 description = "FASTQ utilities"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -33,3 +33,6 @@ dev = [
     "pytest",
     "black",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "heyfastqlib.__version__"}
