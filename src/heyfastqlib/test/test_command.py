@@ -230,3 +230,59 @@ def test_filter_seq_ids_command(tmp_path):
     )
     with open(out1) as f:
         assert f.read() == "@b\nGTCC\n+\n5678\n"
+
+
+in1_subsample = """\
+@a
+AGC
++
+123
+@b
+GCT
++
+.o.
+@c
+CTG
++
+***
+"""
+
+in2_subsample = """\
+@a
+ACG
++
+998
+@b
+GCT
++
+..o
+@c
+CTC
++
+xxx
+"""
+
+def test_subsample_command(tmp_path):
+    in1 = tmp_path / "input_1.fastq"
+    with open(in1, "w") as f:
+        f.write(in1_subsample)
+    in2 = tmp_path / "input_2.fastq"
+    with open(in2, "w") as f:
+        f.write(in2_subsample)
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+    heyfastq_main(
+        [
+            "subsample",
+            "--n", "2",
+            "--seed", "500",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
+    )
+    with open(out1) as f:
+        assert f.read() == "@a\nAGC\n+\n123\n@c\nCTG\n+\n***\n"

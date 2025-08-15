@@ -25,7 +25,7 @@ from .argparse_types import GzipFileType, HFQFormatter
 
 def subsample_subcommand(args):
     reads = parse_fastq_paired(args.input)
-    out_reads = subsample(reads, args.n)
+    out_reads = subsample(reads, args.n, args.seed)
     write_fastq_paired(args.output, out_reads)
 
 
@@ -217,6 +217,7 @@ def heyfastq_main(argv=None):
         help="Select random reads",
     )
     subsample_parser.add_argument("--n", type=int, default=1000, help="Number of reads")
+    subsample_parser.add_argument("--seed", type=int, help="Random seed")
     subsample_parser.set_defaults(func=subsample_subcommand)
 
     args = main_parser.parse_args(argv)
