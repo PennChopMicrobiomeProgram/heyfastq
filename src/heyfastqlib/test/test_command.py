@@ -262,6 +262,7 @@ CTC
 xxx
 """
 
+
 def test_subsample_command(tmp_path):
     in1 = tmp_path / "input_1.fastq"
     with open(in1, "w") as f:
@@ -274,8 +275,10 @@ def test_subsample_command(tmp_path):
     heyfastq_main(
         [
             "subsample",
-            "--n", "2",
-            "--seed", "500",
+            "--n",
+            "2",
+            "--seed",
+            "500",
             "--input",
             str(in1),
             str(in2),
