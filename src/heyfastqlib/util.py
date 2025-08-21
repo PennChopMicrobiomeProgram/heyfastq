@@ -3,7 +3,8 @@ import itertools
 import random
 
 
-def subsample(xs, n):
+def subsample(xs, n, seed=None):
+    random.seed(seed)
     # https://en.wikipedia.org/wiki/Reservoir_sampling
     reservoir = [None for _ in range(n)]
     for i, x in enumerate(xs):
