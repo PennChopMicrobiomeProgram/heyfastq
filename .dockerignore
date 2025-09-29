@@ -1,0 +1,14 @@
+# Ignore Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Ignore Git metadata and CI configuration
+.git
+.gitignore
+.github/
+
+# Ignore test caches
+.pytest_cache/
