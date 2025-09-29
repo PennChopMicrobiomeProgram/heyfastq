@@ -2,6 +2,7 @@ import argparse
 import operator
 import signal
 import sys
+from dataclasses import dataclass
 
 from . import __version__
 from .util import (
@@ -24,55 +25,140 @@ from .read import (
 from .argparse_types import GzipFileType, HFQFormatter
 
 
+@dataclass
+class ReadStats:
+    total_reads: int = 0
+    total_bases: int = 0
+
+    def observe(self, paired_read):
+        for read in paired_read:
+            self.total_reads += 1
+            self.total_bases += len(read.seq)
+
+    @property
+    def average_length(self):
+        if self.total_reads == 0:
+            return 0.0
+        return self.total_bases / self.total_reads
+
+
+def _iter_with_stats(paired_reads, stats):
+    for paired_read in paired_reads:
+        stats.observe(paired_read)
+        yield paired_read
+
+
+def _log_stats(label, stats):
+    print(
+        f"{label} reads: total={stats.total_reads}, average_length={stats.average_length:.2f}",
+        file=sys.stderr,
+    )
+
+
+def _run_paired_command(args, build_output):
+    input_stats = ReadStats()
+    output_stats = ReadStats()
+
+    reads = _iter_with_stats(parse_fastq_paired(args.input), input_stats)
+    out_reads = build_output(reads)
+    write_fastq_paired(args.output, _iter_with_stats(out_reads, output_stats))
+
+    _log_stats("Input", input_stats)
+    _log_stats("Output", output_stats)
+
+
 def subsample_subcommand(args):
-    reads = parse_fastq_paired(args.input)
-    out_reads = subsample(reads, args.n, args.seed)
-    write_fastq_paired(args.output, out_reads)
+    def transform(reads):
+        return subsample(reads, args.n, args.seed)
+
+    _run_paired_command(
+        args,
+        transform,
+    )
 
 
 def trim_fixed_subcommand(args):
-    reads = parse_fastq_paired(args.input)
-    out_reads = map_paired(reads, trim, end_idx=args.length)
-    write_fastq_paired(args.output, out_reads)
+    def transform(reads):
+        return map_paired(reads, trim, end_idx=args.length)
+
+    _run_paired_command(
+        args,
+        transform,
+    )
 
 
 def trim_qual_subcommand(args):
-    reads = parse_fastq_paired(args.input)
-    trimmed_moving_average_reads = map_paired(
-        reads, trim_moving_average, k=args.window_width, threshold=args.window_threshold
+    def transform(reads):
+        return _trim_quality_pipeline(
+            reads,
+            window_width=args.window_width,
+            window_threshold=args.window_threshold,
+            start_threshold=args.start_threshold,
+            end_threshold=args.end_threshold,
+            min_length=args.min_length,
+        )
+
+    _run_paired_command(
+        args,
+        transform,
     )
-    trimmed_ends_reads = map_paired(
-        trimmed_moving_average_reads,
-        trim_ends,
-        threshold_start=args.start_threshold,
-        threshold_end=args.end_threshold,
-    )
-    filtered_reads = filter_paired(
-        trimmed_ends_reads, length_ok, threshold=args.min_length
-    )
-    write_fastq_paired(args.output, filtered_reads)
 
 
 def filter_length_subcommand(args):
-    reads = parse_fastq_paired(args.input)
     cmp = operator.lt if args.less else operator.ge
-    out_reads = filter_paired(reads, length_ok, threshold=args.length, cmp=cmp)
-    write_fastq_paired(args.output, out_reads)
+
+    def transform(reads):
+        return filter_paired(reads, length_ok, threshold=args.length, cmp=cmp)
+
+    _run_paired_command(
+        args,
+        transform,
+    )
 
 
 def filter_kscore_subcommand(args):
-    reads = parse_fastq_paired(args.input)
-    out_reads = filter_paired(
-        reads, kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore
+    def transform(reads):
+        return filter_paired(
+            reads, kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore
+        )
+
+    _run_paired_command(
+        args,
+        transform,
     )
-    write_fastq_paired(args.output, out_reads)
 
 
 def filter_seq_ids_subcommand(args):
     seq_ids = set(parse_seq_ids(args.idsfile))
-    reads = parse_fastq_paired(args.input)
-    out_reads = filter_paired(reads, seq_id_ok, seq_ids=seq_ids, keep=args.keep_ids)
-    write_fastq_paired(args.output, out_reads)
+
+    def transform(reads):
+        return filter_paired(reads, seq_id_ok, seq_ids=seq_ids, keep=args.keep_ids)
+
+    _run_paired_command(
+        args,
+        transform,
+    )
+
+
+def _trim_quality_pipeline(
+    reads,
+    *,
+    window_width,
+    window_threshold,
+    start_threshold,
+    end_threshold,
+    min_length,
+):
+    trimmed_moving_average_reads = map_paired(
+        reads, trim_moving_average, k=window_width, threshold=window_threshold
+    )
+    trimmed_ends_reads = map_paired(
+        trimmed_moving_average_reads,
+        trim_ends,
+        threshold_start=start_threshold,
+        threshold_end=end_threshold,
+    )
+    return filter_paired(trimmed_ends_reads, length_ok, threshold=min_length)
 
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False, formatter_class=HFQFormatter)
