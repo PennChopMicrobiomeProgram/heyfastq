@@ -1,7 +1,7 @@
 # heyfastq
 
 <!-- Badges start -->
-[![Tests](https://github.com/kylebittinger/heyfastq/actions/workflows/pr.yml/badge.svg)](https://github.com/kylebittinger/heyfastq/actions/workflows/pr.yml)
+[![CI](https://github.com/PennChopMicrobiomeProgram/heyfastq/actions/workflows/ci.yml/badge.svg)](https://github.com/PennChopMicrobiomeProgram/heyfastq/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/heyfastq.svg)](https://pypi.org/project/heyfastq/)
 <!-- Badges end -->
 
