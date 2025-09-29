@@ -1,6 +1,5 @@
 import argparse
 import operator
-from functools import partial
 import signal
 import sys
 from dataclasses import dataclass
@@ -69,55 +68,75 @@ def _run_paired_command(args, build_output):
 
 
 def subsample_subcommand(args):
+    def transform(reads):
+        return subsample(reads, args.n, args.seed)
+
     _run_paired_command(
         args,
-        partial(subsample, n=args.n, seed=args.seed),
+        transform,
     )
 
 
 def trim_fixed_subcommand(args):
+    def transform(reads):
+        return map_paired(reads, trim, end_idx=args.length)
+
     _run_paired_command(
         args,
-        partial(map_paired, f=trim, end_idx=args.length),
+        transform,
     )
 
 
 def trim_qual_subcommand(args):
-    _run_paired_command(
-        args,
-        partial(
-            _trim_quality_pipeline,
+    def transform(reads):
+        return _trim_quality_pipeline(
+            reads,
             window_width=args.window_width,
             window_threshold=args.window_threshold,
             start_threshold=args.start_threshold,
             end_threshold=args.end_threshold,
             min_length=args.min_length,
-        ),
+        )
+
+    _run_paired_command(
+        args,
+        transform,
     )
 
 
 def filter_length_subcommand(args):
     cmp = operator.lt if args.less else operator.ge
 
+    def transform(reads):
+        return filter_paired(reads, length_ok, threshold=args.length, cmp=cmp)
+
     _run_paired_command(
         args,
-        partial(filter_paired, f=length_ok, threshold=args.length, cmp=cmp),
+        transform,
     )
 
 
 def filter_kscore_subcommand(args):
+    def transform(reads):
+        return filter_paired(
+            reads, kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore
+        )
+
     _run_paired_command(
         args,
-        partial(filter_paired, f=kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore),
+        transform,
     )
 
 
 def filter_seq_ids_subcommand(args):
     seq_ids = set(parse_seq_ids(args.idsfile))
 
+    def transform(reads):
+        return filter_paired(reads, seq_id_ok, seq_ids=seq_ids, keep=args.keep_ids)
+
     _run_paired_command(
         args,
-        partial(filter_paired, f=seq_id_ok, seq_ids=seq_ids, keep=args.keep_ids),
+        transform,
     )
 
 
