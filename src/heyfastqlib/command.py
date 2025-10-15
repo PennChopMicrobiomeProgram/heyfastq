@@ -22,7 +22,7 @@ from .read import (
     trim_moving_average,
     trim_ends,
 )
-from .argparse_types import GzipFileType, HFQFormatter
+from .argparse_types import GzipFileType, HFQFormatter, set_gzip_output_compresslevel
 
 
 @dataclass
@@ -176,6 +176,20 @@ fastq_io_parser.add_argument(
     default=[sys.stdout],
     help="Output FASTQs, can be gzipped (default: stdout)",
 )
+fastq_io_parser.add_argument(
+    "--gzip-level",
+    type=int,
+    choices=range(10),
+    default=None,
+    help="Compression level for gzip outputs (0-9, default: gzip module default)",
+)
+
+
+def _extract_gzip_level(argv):
+    level_parser = argparse.ArgumentParser(add_help=False)
+    level_parser.add_argument("--gzip-level", type=int, choices=range(10))
+    known_args, _ = level_parser.parse_known_args(argv)
+    return known_args.gzip_level
 
 
 def heyfastq_main(argv=None):
@@ -187,6 +201,13 @@ def heyfastq_main(argv=None):
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
     except AttributeError:
         pass
+
+    if argv is None:
+        argv = sys.argv[1:]
+    else:
+        argv = list(argv)
+
+    set_gzip_output_compresslevel(_extract_gzip_level(argv))
 
     main_parser = argparse.ArgumentParser()
     main_parser.add_argument(

@@ -1,6 +1,20 @@
 import gzip
 import sys
 import argparse
+from typing import Optional
+
+
+_gzip_output_compresslevel: Optional[int] = None
+
+
+def set_gzip_output_compresslevel(level: Optional[int]) -> None:
+    """Configure the compression level used for gzip outputs.
+
+    A value of ``None`` falls back to Python's default compression level.
+    """
+
+    global _gzip_output_compresslevel
+    _gzip_output_compresslevel = level
 
 
 class GzipFileType(object):
@@ -48,12 +62,18 @@ class GzipFileType(object):
                 gzipped = string.endswith(".gz")
 
             if gzipped:
+                gzip_kwargs = {}
+                if "w" in self._mode and _gzip_output_compresslevel is not None:
+                    gzip_kwargs["compresslevel"] = _gzip_output_compresslevel
+                if self._encoding is not None:
+                    gzip_kwargs["encoding"] = self._encoding
+                if self._errors is not None:
+                    gzip_kwargs["errors"] = self._errors
+
                 f = gzip.open(
                     string,
                     f"{self._mode}t",
-                    self._bufsize,
-                    self._encoding,
-                    self._errors,
+                    **gzip_kwargs,
                 )
             else:
                 f = open(
