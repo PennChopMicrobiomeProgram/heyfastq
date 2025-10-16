@@ -1,4 +1,5 @@
 import argparse
+import io
 import operator
 import signal
 import sys
@@ -55,13 +56,43 @@ def _log_stats(label, stats):
     )
 
 
+_STD_STREAMS = {
+    stream
+    for stream in (
+        sys.stdin,
+        sys.stdout,
+        sys.stderr,
+        getattr(sys.stdin, "buffer", None),
+        getattr(sys.stdout, "buffer", None),
+        getattr(sys.stderr, "buffer", None),
+    )
+    if stream is not None
+}
+
+
+def _close_stream(stream):
+    if stream in _STD_STREAMS:
+        return
+    if isinstance(stream, (io.StringIO, io.BytesIO)):
+        return
+    close = getattr(stream, "close", None)
+    if close is not None:
+        close()
+
+
 def _run_paired_command(args, build_output):
     input_stats = ReadStats()
     output_stats = ReadStats()
 
-    reads = _iter_with_stats(parse_fastq_paired(args.input), input_stats)
-    out_reads = build_output(reads)
-    write_fastq_paired(args.output, _iter_with_stats(out_reads, output_stats))
+    try:
+        reads = _iter_with_stats(parse_fastq_paired(args.input), input_stats)
+        out_reads = build_output(reads)
+        write_fastq_paired(args.output, _iter_with_stats(out_reads, output_stats))
+    finally:
+        for stream in getattr(args, "input", []) or []:
+            _close_stream(stream)
+        for stream in getattr(args, "output", []) or []:
+            _close_stream(stream)
 
     _log_stats("Input", input_stats)
     _log_stats("Output", output_stats)
