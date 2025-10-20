@@ -314,8 +314,10 @@ def heyfastq_main(argv=None):
     subsample_parser.set_defaults(func=subsample_subcommand)
 
     args = main_parser.parse_args(argv)
-    if args.input is None:  # pragma: no cover
+    if args.input is None:
         args.input = sys.stdin
-    if args.output is None:  # pragma: no cover
+    if args.output is None:
         args.output = sys.stdout
+    if args.threads is None:
+        args.threads = 1
     args.func(args)

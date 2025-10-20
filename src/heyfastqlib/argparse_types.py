@@ -1,6 +1,9 @@
-import gzip
-import sys
 import argparse
+import gzip
+import os
+import shutil
+import subprocess as sp
+import sys
 
 
 class GzipFileType(object):
@@ -28,6 +31,39 @@ class GzipFileType(object):
         self._encoding = encoding
         self._errors = errors
 
+    def open_gzip(self, filename):
+        compression = os.environ.get("HFQ_GZIP_COMPRESSION", "4")
+        pigz = shutil.which("pigz")
+
+        if pigz is not None:
+            if "r" in self._mode:
+                return sp.Popen(
+                    [pigz, f"-{compression}", "-dc", filename],
+                    stdout=sp.PIPE,
+                    bufsize=self._bufsize,
+                ).stdout
+            elif any(c in self._mode for c in "wax"):
+                return sp.Popen(
+                    [pigz, f"-{compression}", "-c"],
+                    stdin=sp.PIPE,
+                    stdout=open(
+                        filename,
+                        "wb",
+                        self._bufsize,
+                    ),
+                    bufsize=self._bufsize,
+                ).stdin
+            else:
+                raise ValueError(f"invalid mode for gzip file: {self._mode}")
+        else:
+            return gzip.open(
+                filename,
+                self._mode + "t",
+                self._bufsize,
+                self._encoding,
+                self._errors,
+            )
+
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
         if string == "-":
@@ -36,7 +72,7 @@ class GzipFileType(object):
             elif any(c in self._mode for c in "wax"):
                 return sys.stdout.buffer if "b" in self._mode else sys.stdout
             else:
-                msg = f'argument "-" with mode {self.mode}'
+                msg = f'argument "-" with mode {self._mode}'
                 raise ValueError(msg)
 
         # all other arguments are used as file names
@@ -48,13 +84,7 @@ class GzipFileType(object):
                 gzipped = string.endswith(".gz")
 
             if gzipped:
-                f = gzip.open(
-                    string,
-                    f"{self._mode}t",
-                    self._bufsize,
-                    self._encoding,
-                    self._errors,
-                )
+                f = self.open_gzip(string)
             else:
                 f = open(
                     string, self._mode, self._bufsize, self._encoding, self._errors
