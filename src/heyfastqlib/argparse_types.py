@@ -10,6 +10,8 @@ from typing import Iterable, Optional
 
 
 _DEFAULT_THREAD_COUNT = str(min(32, os.cpu_count() or 32))
+# TEST
+_DEFAULT_THREAD_COUNT = os.environ.get("HFQ_BENCH_PIGZ_THREADS", None)
 
 
 def _normalise_gzip_mode(mode: str) -> str:
@@ -29,6 +31,8 @@ def _gzip_reader_process(path: str) -> Optional[subprocess.Popen]:
         if gzip_bin:
             cmd = [gzip_bin, "-cd", path]
 
+
+    print(cmd)
     if cmd is None:
         return None
 
@@ -46,6 +50,7 @@ def _gzip_writer_process(destination: str) -> Optional[tuple[subprocess.Popen, I
         if gzip_bin:
             cmd = [gzip_bin, "-c"]
 
+    print(cmd)
     if cmd is None:
         return None
 
