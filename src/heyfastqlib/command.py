@@ -1,4 +1,5 @@
 import argparse
+import json
 import operator
 import signal
 import sys
@@ -38,6 +39,7 @@ def trim_fixed_subcommand(args):
             parse_fastq(args.input), trim, counter, start_idx=0, end_idx=args.length
         ),
     )
+    return {"trim_fixed": counter}
 
 
 def trim_qual_subcommand(args):
@@ -76,6 +78,11 @@ def trim_qual_subcommand(args):
     )
     reads = filter_reads(reads, length_ok, length_counter, threshold=args.min_length)
     write_fastq(args.output, reads)
+    return {
+        "filter_length": length_counter,
+        "trim_ends": trim_ends_counter,
+        "trim_avg": trim_avg_counter,
+    }
 
 
 def filter_length_subcommand(args):
@@ -87,6 +94,7 @@ def filter_length_subcommand(args):
             parse_fastq(args.input), length_ok, counter, threshold=args.length, cmp=cmp
         ),
     )
+    return {"filter_length": counter}
 
 
 def filter_kscore_subcommand(args):
@@ -101,6 +109,7 @@ def filter_kscore_subcommand(args):
             min_kscore=args.min_kscore,
         ),
     )
+    return {"filter_kscore": counter}
 
 
 def filter_seq_ids_subcommand(args):
@@ -116,6 +125,7 @@ def filter_seq_ids_subcommand(args):
             keep=args.keep_ids,
         ),
     )
+    return {"filter_seq_ids": counter}
 
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False, formatter_class=HFQFormatter)
@@ -132,6 +142,12 @@ fastq_io_parser.add_argument(
     nargs="*",
     default=[sys.stdout],
     help="Output FASTQs, can be gzipped (default: stdout)",
+)
+fastq_io_parser.add_argument(
+    "--report",
+    type=argparse.FileType("w"),
+    default=sys.stderr,
+    help="Output report file",
 )
 fastq_io_parser.add_argument(
     "--threads", type=int, default=1, help="Number of threads to use (default: 1)"
@@ -293,7 +309,19 @@ def heyfastq_main(argv=None):
         args.output = [o[0] for o in args.output]
     if args.threads is None:
         args.threads = 1
-    args.func(args)
 
+    # Run the main logic
+    stats = args.func(args)
+
+    # Construct report and write as json
+    report = {"version": __version__}
+    for k, v in vars(args).items():
+        if k not in ("input", "output", "func", "idsfile", "report", "threads"):
+            report[k] = v
+
+    report.update(stats)
+    json.dump(report, args.report, indent=4)
+
+    # Close all opened files/pipes
     for c in closers:
         c()
