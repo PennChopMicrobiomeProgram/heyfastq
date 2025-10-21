@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess as sp
 import sys
+from typing import Any, IO
 
 
 class GzipFileType(object):
@@ -37,13 +38,21 @@ class GzipFileType(object):
 
         if pigz is not None:
             if "r" in self._mode:
-                return sp.Popen(
+                p = sp.Popen(
                     [pigz, f"-{compression}", "-dc", filename],
                     stdout=sp.PIPE,
                     bufsize=self._bufsize,
-                ).stdout
+                )
+
+                def close():
+                    if p.stdout is None:
+                        return
+                    p.stdout.close()
+                    p.wait()
+
+                return p.stdout, close
             elif any(c in self._mode for c in "wax"):
-                return sp.Popen(
+                p = sp.Popen(
                     [pigz, f"-{compression}", "-c"],
                     stdin=sp.PIPE,
                     stdout=open(
@@ -52,11 +61,19 @@ class GzipFileType(object):
                         self._bufsize,
                     ),
                     bufsize=self._bufsize,
-                ).stdin
+                )
+
+                def close():
+                    if p.stdin is None:
+                        return
+                    p.stdin.close()
+                    p.wait()
+
+                return p.stdin, close
             else:
                 raise ValueError(f"invalid mode for gzip file: {self._mode}")
         else:
-            return gzip.open(
+            f = gzip.open(
                 filename,
                 self._mode + "t",
                 self._bufsize,
@@ -64,13 +81,19 @@ class GzipFileType(object):
                 self._errors,
             )
 
+            return f, f.close
+
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
         if string == "-":
             if "r" in self._mode:
-                return sys.stdin.buffer if "b" in self._mode else sys.stdin
+                return sys.stdin.buffer, None if "b" in self._mode else sys.stdin, None
             elif any(c in self._mode for c in "wax"):
-                return sys.stdout.buffer if "b" in self._mode else sys.stdout
+                return (
+                    sys.stdout.buffer,
+                    None if "b" in self._mode else sys.stdout,
+                    None,
+                )
             else:
                 msg = f'argument "-" with mode {self._mode}'
                 raise ValueError(msg)
@@ -84,13 +107,19 @@ class GzipFileType(object):
                 gzipped = string.endswith(".gz")
 
             if gzipped:
-                f = self.open_gzip(string)
+                f, close = self.open_gzip(string)
             else:
                 f = open(
                     string, self._mode, self._bufsize, self._encoding, self._errors
                 )
+                close = f.close
 
-            return f
+            if f is None:
+                raise argparse.ArgumentTypeError(
+                    f"can't open {string} with mode {self._mode}"
+                )
+
+            return f, close
         except OSError as e:
             args = {"filename": string, "error": e}
             message = f"can't open {args['filename']}: {args['error']}"

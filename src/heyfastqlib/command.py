@@ -1,6 +1,7 @@
 import argparse
 import operator
 import signal
+import subprocess as sp
 import sys
 from . import __version__
 from .argparse_types import GzipFileType, HFQFormatter
@@ -271,10 +272,26 @@ def heyfastq_main(argv=None):
     subsample_parser.set_defaults(func=subsample_subcommand)
 
     args = main_parser.parse_args(argv)
+
+    # This closers list is a pretty convoluted mechanism to ensure that all opened files and pipes are closed after use
+    # It handles everything from sys.stdin/out (no closing necessary) to subprocess pipes (need to close stream handlers and wait for process to end)
+    # So we attach a closer function to each opened input/output file handler and call them all at the end
+    closers = []
     if args.input is None:
         args.input = sys.stdin
+    else:
+        for i in args.input:
+            closers.append(i[1])
+        args.input = [i[0] for i in args.input]
     if args.output is None:
         args.output = sys.stdout
+    else:
+        for o in args.output:
+            closers.append(o[1])
+        args.output = [o[0] for o in args.output]
     if args.threads is None:
         args.threads = 1
     args.func(args)
+
+    for c in closers:
+        c()
