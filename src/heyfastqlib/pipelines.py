@@ -54,11 +54,12 @@ def _map_worker(args: tuple[list[R], Callable[[R], R], dict]) -> tuple[list[R], 
     out: list[R] = []
     for r in chunk:
         chunk_counter["input_reads"] += 1
-        bases = count_bases(r)
-        chunk_counter["input_bases"] += bases
-        out.append(f(r, **kwargs))
-    chunk_counter["output_reads"] = chunk_counter["input_reads"]
-    chunk_counter["output_bases"] = chunk_counter["input_bases"]
+        input_bases = count_bases(r)
+        chunk_counter["input_bases"] += input_bases
+        mapped = f(r, **kwargs)
+        chunk_counter["output_reads"] += 1
+        chunk_counter["output_bases"] += count_bases(mapped)
+        out.append(mapped)
     return out, chunk_counter
 
 
@@ -122,11 +123,12 @@ def map_reads(
     if threads == 1:
         for r in rs:
             counter["input_reads"] += 1
-            counter["input_bases"] += count_bases(r)
-            yield f(r, **kwargs)
-
-        counter["output_reads"] = counter["input_reads"]
-        counter["output_bases"] = counter["input_bases"]
+            input_bases = count_bases(r)
+            counter["input_bases"] += input_bases
+            mapped = f(r, **kwargs)
+            counter["output_reads"] += 1
+            counter["output_bases"] += count_bases(mapped)
+            yield mapped
         return
 
     task_iter = ((chunk, f, kwargs) for chunk in _chunk_reads(rs, chunk_size))
@@ -135,9 +137,6 @@ def map_reads(
             _merge_counters(counter, chunk_counter)
             for r in out_chunk:
                 yield r
-
-    counter["output_reads"] = counter["input_reads"]
-    counter["output_bases"] = counter["input_bases"]
 
 
 def subsample_reads(

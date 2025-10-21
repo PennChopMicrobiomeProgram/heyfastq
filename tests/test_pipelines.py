@@ -123,7 +123,7 @@ def test_map_reads_applies_function_and_counts():
         "input_reads": 2,
         "input_bases": 9,
         "output_reads": 2,
-        "output_bases": 9,
+        "output_bases": 6,
     }
 
 
@@ -149,7 +149,7 @@ def test_map_reads_supports_pairs():
         "input_reads": 1,
         "input_bases": 5,
         "output_reads": 1,
-        "output_bases": 5,
+        "output_bases": 4,
     }
 
 
@@ -176,7 +176,7 @@ def test_map_reads_multiprocess_matches_single_thread():
         "input_reads": 2,
         "input_bases": 9,
         "output_reads": 2,
-        "output_bases": 9,
+        "output_bases": 6,
     }
 
 
