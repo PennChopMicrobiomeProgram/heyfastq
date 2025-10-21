@@ -35,7 +35,13 @@ def trim_fixed_subcommand(args):
     write_fastq(
         args.output,
         map_reads(
-            parse_fastq(args.input), trim, counter, start_idx=0, end_idx=args.length
+            parse_fastq(args.input),
+            trim,
+            counter,
+            start_idx=0,
+            end_idx=args.length,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
         ),
     )
 
@@ -66,6 +72,8 @@ def trim_qual_subcommand(args):
         trim_avg_counter,
         k=args.window_width,
         threshold=args.window_threshold,
+        threads=args.threads,
+        chunk_size=args.chunk_size,
     )
     reads = map_reads(
         reads,
@@ -73,8 +81,17 @@ def trim_qual_subcommand(args):
         trim_ends_counter,
         threshold_start=args.start_threshold,
         threshold_end=args.end_threshold,
+        threads=args.threads,
+        chunk_size=args.chunk_size,
     )
-    reads = filter_reads(reads, length_ok, length_counter, threshold=args.min_length)
+    reads = filter_reads(
+        reads,
+        length_ok,
+        length_counter,
+        threshold=args.min_length,
+        threads=args.threads,
+        chunk_size=args.chunk_size,
+    )
     write_fastq(args.output, reads)
 
 
@@ -84,7 +101,13 @@ def filter_length_subcommand(args):
     write_fastq(
         args.output,
         filter_reads(
-            parse_fastq(args.input), length_ok, counter, threshold=args.length, cmp=cmp
+            parse_fastq(args.input),
+            length_ok,
+            counter,
+            threshold=args.length,
+            cmp=cmp,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
         ),
     )
 
@@ -99,6 +122,8 @@ def filter_kscore_subcommand(args):
             counter,
             k=args.kmer_size,
             min_kscore=args.min_kscore,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
         ),
     )
 
@@ -114,6 +139,8 @@ def filter_seq_ids_subcommand(args):
             counter,
             seq_ids=seq_ids,
             keep=args.keep_ids,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
         ),
     )
 
@@ -135,6 +162,12 @@ fastq_io_parser.add_argument(
 )
 fastq_io_parser.add_argument(
     "--threads", type=int, default=1, help="Number of threads to use (default: 1)"
+)
+fastq_io_parser.add_argument(
+    "--chunk-size",
+    type=int,
+    default=1000,
+    help="Number of reads processed per worker chunk (default: 1000)",
 )
 
 

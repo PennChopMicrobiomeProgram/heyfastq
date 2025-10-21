@@ -1,7 +1,7 @@
 from collections.abc import Iterable
 
 from heyfastqlib.pipelines import filter_reads, map_reads, subsample_reads
-from heyfastqlib.read import Read, trim
+from heyfastqlib.read import Read, trim, length_ok
 from heyfastqlib.util import subsample as util_subsample
 
 
@@ -74,6 +74,34 @@ def test_filter_reads_supports_pairs():
     }
 
 
+def test_filter_reads_multiprocess_matches_single_thread():
+    reads = [
+        Read("r1", "ATCG", "!!!!"),
+        Read("r2", "AT", "!!!!"),
+        Read("r3", "ATGGC", "!!!!!"),
+    ]
+    counter = make_counter()
+
+    kept = list(
+        filter_reads(
+            iter_pipe(reads),
+            length_ok,
+            counter,
+            threshold=4,
+            threads=2,
+            chunk_size=1,
+        )
+    )
+
+    assert kept == [reads[0], reads[2]]
+    assert counter == {
+        "input_reads": 3,
+        "input_bases": 11,
+        "output_reads": 2,
+        "output_bases": 9,
+    }
+
+
 def test_map_reads_applies_function_and_counts():
     reads = [
         Read("r1", "ACGT", "!!!!"),
@@ -122,6 +150,33 @@ def test_map_reads_supports_pairs():
         "input_bases": 5,
         "output_reads": 1,
         "output_bases": 5,
+    }
+
+
+def test_map_reads_multiprocess_matches_single_thread():
+    reads = [
+        Read("r1", "ACGT", "!!!!"),
+        Read("r2", "GGGTT", "!!!!!"),
+    ]
+    counter = make_counter()
+
+    mapped = list(
+        map_reads(
+            iter_pipe(reads),
+            trim,
+            counter,
+            end_idx=3,
+            threads=2,
+            chunk_size=1,
+        )
+    )
+
+    assert [r.seq for r in mapped] == ["ACG", "GGG"]
+    assert counter == {
+        "input_reads": 2,
+        "input_bases": 9,
+        "output_reads": 2,
+        "output_bases": 9,
     }
 
 
