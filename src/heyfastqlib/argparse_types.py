@@ -1,5 +1,6 @@
 import argparse
 import gzip
+import io
 import os
 import shutil
 import subprocess as sp
@@ -39,6 +40,8 @@ class GzipFileType(object):
         pigz = shutil.which("pigz")
 
         if pigz is not None:
+            binary_mode = "b" in self._mode
+
             if "r" in self._mode:
                 p = sp.Popen(
                     [pigz, f"-{compression}", "-dc", filename],
@@ -46,13 +49,27 @@ class GzipFileType(object):
                     bufsize=self._bufsize,
                 )
 
+                raw_stdout = p.stdout
+                if raw_stdout is None:
+                    raise ValueError("pigz stdout unavailable")
+
+                if binary_mode:
+                    stream = raw_stdout
+                else:
+                    stream = io.TextIOWrapper(
+                        raw_stdout,
+                        encoding=self._encoding,
+                        errors=self._errors,
+                    )
+
                 def close():
-                    if p.stdout is None:
-                        return
-                    p.stdout.close()
+                    if binary_mode:
+                        raw_stdout.close()
+                    else:
+                        stream.close()
                     p.wait()
 
-                return p.stdout, close
+                return stream, close
             elif any(c in self._mode for c in "wax"):
                 p = sp.Popen(
                     [pigz, f"-{compression}", "-c"],
@@ -65,13 +82,27 @@ class GzipFileType(object):
                     bufsize=self._bufsize,
                 )
 
+                raw_stdin = p.stdin
+                if raw_stdin is None:
+                    raise ValueError("pigz stdin unavailable")
+
+                if binary_mode:
+                    stream = raw_stdin
+                else:
+                    stream = io.TextIOWrapper(
+                        raw_stdin,
+                        encoding=self._encoding,
+                        errors=self._errors,
+                    )
+
                 def close():
-                    if p.stdin is None:
-                        return
-                    p.stdin.close()
+                    if binary_mode:
+                        raw_stdin.close()
+                    else:
+                        stream.close()
                     p.wait()
 
-                return p.stdin, close
+                return stream, close
             else:
                 raise ValueError(f"invalid mode for gzip file: {self._mode}")
         else:
