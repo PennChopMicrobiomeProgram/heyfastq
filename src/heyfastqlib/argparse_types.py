@@ -78,7 +78,7 @@ class GzipFileType(object):
             f = gzip.open(
                 filename,
                 self._mode + "t",
-                self._bufsize,
+                int(compression),
                 self._encoding,
                 self._errors,
             )
