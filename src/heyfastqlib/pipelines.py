@@ -79,6 +79,9 @@ def filter_reads(
     if chunk_size < 1:
         raise ValueError("chunk_size must be at least 1")
 
+    # Using a multiprocessing Pool with a single worker is substantially slower
+    # than iterating locally because of process start-up and pickle overhead,
+    # so we keep this fast path for the common single-threaded case.
     if threads == 1:
         for r in rs:
             counter["input_reads"] += 1
@@ -115,6 +118,7 @@ def map_reads(
     if chunk_size < 1:
         raise ValueError("chunk_size must be at least 1")
 
+    # See note in filter_reads about the single-threaded fast path.
     if threads == 1:
         for r in rs:
             counter["input_reads"] += 1
