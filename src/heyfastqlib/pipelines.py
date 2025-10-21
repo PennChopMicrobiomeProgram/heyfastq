@@ -1,4 +1,4 @@
-from .types import count_bases, R, ReadPipe
+from .read import count_bases, R, ReadPipe
 from .util import subsample
 from typing import Callable, Optional
 

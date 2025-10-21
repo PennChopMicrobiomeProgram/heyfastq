@@ -1,7 +1,6 @@
 import argparse
 import operator
 import signal
-import subprocess as sp
 import sys
 from . import __version__
 from .argparse_types import GzipFileType, HFQFormatter

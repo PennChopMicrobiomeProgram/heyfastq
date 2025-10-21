@@ -4,7 +4,6 @@ import os
 import shutil
 import subprocess as sp
 import sys
-from typing import Any, IO
 
 
 class GzipFileType(object):
@@ -34,6 +33,9 @@ class GzipFileType(object):
 
     def open_gzip(self, filename):
         compression = os.environ.get("HFQ_GZIP_COMPRESSION", "4")
+        if not compression.isdigit() or not (0 <= int(compression) <= 9):
+            print(f"Invalid HFQ_GZIP_COMPRESSION value{(compression)}, using default 4")
+            compression = "4"
         pigz = shutil.which("pigz")
 
         if pigz is not None:

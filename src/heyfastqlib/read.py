@@ -1,17 +1,32 @@
 from dataclasses import dataclass
 import operator
-from typing import Callable
-
+from typing import Callable, Generator, Tuple, TypeVar
 from .seqs import kscore
-from .types import R
 from .util import sliding_sum
 
 
 @dataclass(slots=True)
 class Read:
+    """A single FASTQ read representation"""
+
     desc: str
     seq: str
     qual: str
+
+
+ReadPair = Tuple[Read, Read]
+R = TypeVar("R", Read, ReadPair)
+"""The primary type variable representing either a single Read or a paired Read tuple.
+This is what flows through the pipelines."""
+ReadPipe = Generator[R, None, None]
+"""The primary pipeline type representing a generator of Reads or Read pairs."""
+
+
+def count_bases(r: R) -> int:
+    if isinstance(r, tuple):
+        return len(r[0].seq)
+    else:
+        return len(r.seq)
 
 
 def seq_id(read: Read) -> str:

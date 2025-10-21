@@ -1,5 +1,4 @@
-from .read import Read
-from .types import R, ReadPair, ReadPipe
+from .read import R, Read, ReadPair, ReadPipe
 from typing import Generator, Iterator, overload, TextIO, Union
 
 
