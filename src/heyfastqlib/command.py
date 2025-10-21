@@ -133,6 +133,9 @@ fastq_io_parser.add_argument(
     default=[sys.stdout],
     help="Output FASTQs, can be gzipped (default: stdout)",
 )
+fastq_io_parser.add_argument(
+    "--threads", type=int, default=1, help="Number of threads to use (default: 1)"
+)
 
 
 def heyfastq_main(argv=None):
