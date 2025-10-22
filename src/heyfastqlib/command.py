@@ -3,6 +3,7 @@ import json
 import operator
 import signal
 import sys
+from itertools import count
 from . import __version__
 from .argparse_types import GzipFileType, HFQFormatter
 from .io import (
@@ -11,7 +12,7 @@ from .io import (
     write_fastq,
     parse_seq_ids,
 )
-from .pipelines import filter_reads, map_reads, subsample_reads
+from .pipelines import filter_reads, map_reads
 from .read import (
     trim,
     kscore_ok,
@@ -20,6 +21,7 @@ from .read import (
     trim_moving_average,
     trim_ends,
 )
+from .util import subsample
 
 
 def subsample_subcommand(args):
@@ -31,14 +33,18 @@ def subsample_subcommand(args):
         "output_reads": 0,
         "output_bases": 0,
     }
+    indexes = set(subsample(list(range(num_reads)), args.n, args.seed))
+    index_counter = count()
+
+    def keep_read(_: object, *, _indexes=indexes, _counter=index_counter) -> bool:
+        return next(_counter) in _indexes
+
     write_fastq(
         args.output,
-        subsample_reads(
+        filter_reads(
             parse_fastq(args.input),
-            num_reads,
-            args.n,
-            args.seed,
-            counter=counter,
+            keep_read,
+            counter,
         ),
     )
     return {"subsample": counter}
