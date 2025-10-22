@@ -23,7 +23,9 @@ def _chunk_reads(rs: Iterable[R], chunk_size: int) -> Iterator[list[R]]:
         yield chunk
 
 
-def _filter_worker(args: tuple[list[R], Callable[[R], bool], dict]) -> tuple[list[R], CounterDict]:
+def _filter_worker(
+    args: tuple[list[R], Callable[[R], bool], dict],
+) -> tuple[list[R], CounterDict]:
     chunk, f, kwargs = args
     chunk_counter: CounterDict = {
         "input_reads": 0,
@@ -43,7 +45,9 @@ def _filter_worker(args: tuple[list[R], Callable[[R], bool], dict]) -> tuple[lis
     return out, chunk_counter
 
 
-def _map_worker(args: tuple[list[R], Callable[[R], R], dict]) -> tuple[list[R], CounterDict]:
+def _map_worker(
+    args: tuple[list[R], Callable[[R], R], dict],
+) -> tuple[list[R], CounterDict]:
     chunk, f, kwargs = args
     chunk_counter: CounterDict = {
         "input_reads": 0,
@@ -96,7 +100,9 @@ def filter_reads(
 
     task_iter = ((chunk, f, kwargs) for chunk in _chunk_reads(rs, chunk_size))
     with Pool(processes=threads) as pool:
-        for out_chunk, chunk_counter in pool.imap(_filter_worker, task_iter, chunksize=1):
+        for out_chunk, chunk_counter in pool.imap(
+            _filter_worker, task_iter, chunksize=1
+        ):
             _merge_counters(counter, chunk_counter)
             for r in out_chunk:
                 yield r
@@ -140,13 +146,28 @@ def map_reads(
 
 
 def subsample_reads(
-    rs: ReadPipe[R], l: int, n: int, seed: Optional[int]
+    rs: ReadPipe[R],
+    l: int,
+    n: int,
+    seed: Optional[int],
+    *,
+    counter: Optional[CounterDict] = None,
 ) -> ReadPipe[R]:
     """
     Subsample is a weird one because it requires working with a full list of reads' indexes in memory
     Doesn't really fit with the pipeline model
     """
-    idxs = subsample(list(range(l)), n, seed)
+    idxs = set(subsample(list(range(l)), n, seed))
     for i, r in enumerate(rs):
+        bases = None
+        if counter is not None:
+            counter["input_reads"] += 1
+            bases = count_bases(r)
+            counter["input_bases"] += bases
         if i in idxs:
+            if counter is not None:
+                if bases is None:
+                    bases = count_bases(r)
+                counter["output_reads"] += 1
+                counter["output_bases"] += bases
             yield r

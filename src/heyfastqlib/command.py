@@ -25,10 +25,23 @@ from .read import (
 def subsample_subcommand(args):
     num_reads = count_reads(args.input[0])
     args.input[0].seek(0)
+    counter = {
+        "input_reads": 0,
+        "input_bases": 0,
+        "output_reads": 0,
+        "output_bases": 0,
+    }
     write_fastq(
         args.output,
-        subsample_reads(parse_fastq(args.input), num_reads, args.n, args.seed),
+        subsample_reads(
+            parse_fastq(args.input),
+            num_reads,
+            args.n,
+            args.seed,
+            counter=counter,
+        ),
     )
+    return {"subsample": counter}
 
 
 def trim_fixed_subcommand(args):
