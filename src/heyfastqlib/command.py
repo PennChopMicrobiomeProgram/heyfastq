@@ -1,19 +1,18 @@
 import argparse
+import json
 import operator
 import signal
 import sys
-from dataclasses import dataclass
-
+from itertools import count
 from . import __version__
-from .util import (
-    subsample,
-)
+from .argparse_types import GzipFileType, HFQFormatter
 from .io import (
-    parse_fastq_paired,
-    write_fastq_paired,
+    count_reads,
+    parse_fastq,
+    write_fastq,
     parse_seq_ids,
 )
-from .paired_reads import map_paired, filter_paired
+from .pipelines import filter_reads, map_reads
 from .read import (
     trim,
     kscore_ok,
@@ -22,143 +21,157 @@ from .read import (
     trim_moving_average,
     trim_ends,
 )
-from .argparse_types import GzipFileType, HFQFormatter
-
-
-@dataclass
-class ReadStats:
-    total_reads: int = 0
-    total_bases: int = 0
-
-    def observe(self, paired_read):
-        for read in paired_read:
-            self.total_reads += 1
-            self.total_bases += len(read.seq)
-
-    @property
-    def average_length(self):
-        if self.total_reads == 0:
-            return 0.0
-        return self.total_bases / self.total_reads
-
-
-def _iter_with_stats(paired_reads, stats):
-    for paired_read in paired_reads:
-        stats.observe(paired_read)
-        yield paired_read
-
-
-def _log_stats(label, stats):
-    print(
-        f"{label} reads: total={stats.total_reads}, average_length={stats.average_length:.2f}",
-        file=sys.stderr,
-    )
-
-
-def _run_paired_command(args, build_output):
-    input_stats = ReadStats()
-    output_stats = ReadStats()
-
-    reads = _iter_with_stats(parse_fastq_paired(args.input), input_stats)
-    out_reads = build_output(reads)
-    write_fastq_paired(args.output, _iter_with_stats(out_reads, output_stats))
-
-    _log_stats("Input", input_stats)
-    _log_stats("Output", output_stats)
+from .util import subsample
 
 
 def subsample_subcommand(args):
-    def transform(reads):
-        return subsample(reads, args.n, args.seed)
+    num_reads = count_reads(args.input[0])
+    args.input[0].seek(0)
+    counter = {
+        "input_reads": 0,
+        "input_bases": 0,
+        "output_reads": 0,
+        "output_bases": 0,
+    }
+    indexes = set(subsample(list(range(num_reads)), args.n, args.seed))
+    index_counter = count()
 
-    _run_paired_command(
-        args,
-        transform,
+    def keep_read(_: object, *, _indexes=indexes, _counter=index_counter) -> bool:
+        return next(_counter) in _indexes
+
+    write_fastq(
+        args.output,
+        filter_reads(
+            parse_fastq(args.input),
+            keep_read,
+            counter,
+        ),
     )
+    return {"subsample": counter}
 
 
 def trim_fixed_subcommand(args):
-    def transform(reads):
-        return map_paired(reads, trim, end_idx=args.length)
-
-    _run_paired_command(
-        args,
-        transform,
+    counter = {"input_reads": 0, "input_bases": 0, "output_reads": 0, "output_bases": 0}
+    write_fastq(
+        args.output,
+        map_reads(
+            parse_fastq(args.input),
+            trim,
+            counter,
+            start_idx=0,
+            end_idx=args.length,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
+        ),
     )
+    return {"trim_fixed": counter}
 
 
 def trim_qual_subcommand(args):
-    def transform(reads):
-        return _trim_quality_pipeline(
-            reads,
-            window_width=args.window_width,
-            window_threshold=args.window_threshold,
-            start_threshold=args.start_threshold,
-            end_threshold=args.end_threshold,
-            min_length=args.min_length,
-        )
-
-    _run_paired_command(
-        args,
-        transform,
+    length_counter = {
+        "input_reads": 0,
+        "input_bases": 0,
+        "output_reads": 0,
+        "output_bases": 0,
+    }
+    trim_ends_counter = {
+        "input_reads": 0,
+        "input_bases": 0,
+        "output_reads": 0,
+        "output_bases": 0,
+    }
+    trim_avg_counter = {
+        "input_reads": 0,
+        "input_bases": 0,
+        "output_reads": 0,
+        "output_bases": 0,
+    }
+    reads = parse_fastq(args.input)
+    reads = map_reads(
+        reads,
+        trim_moving_average,
+        trim_avg_counter,
+        k=args.window_width,
+        threshold=args.window_threshold,
+        threads=args.threads,
+        chunk_size=args.chunk_size,
     )
+    reads = map_reads(
+        reads,
+        trim_ends,
+        trim_ends_counter,
+        threshold_start=args.start_threshold,
+        threshold_end=args.end_threshold,
+        threads=args.threads,
+        chunk_size=args.chunk_size,
+    )
+    reads = filter_reads(
+        reads,
+        length_ok,
+        length_counter,
+        threshold=args.min_length,
+        threads=args.threads,
+        chunk_size=args.chunk_size,
+    )
+    write_fastq(args.output, reads)
+    return {
+        "filter_length": length_counter,
+        "trim_ends": trim_ends_counter,
+        "trim_avg": trim_avg_counter,
+    }
 
 
 def filter_length_subcommand(args):
     cmp = operator.lt if args.less else operator.ge
-
-    def transform(reads):
-        return filter_paired(reads, length_ok, threshold=args.length, cmp=cmp)
-
-    _run_paired_command(
-        args,
-        transform,
+    counter = {"input_reads": 0, "input_bases": 0, "output_reads": 0, "output_bases": 0}
+    write_fastq(
+        args.output,
+        filter_reads(
+            parse_fastq(args.input),
+            length_ok,
+            counter,
+            threshold=args.length,
+            cmp=cmp,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
+        ),
     )
+    return {"filter_length": counter}
 
 
 def filter_kscore_subcommand(args):
-    def transform(reads):
-        return filter_paired(
-            reads, kscore_ok, k=args.kmer_size, min_kscore=args.min_kscore
-        )
-
-    _run_paired_command(
-        args,
-        transform,
+    counter = {"input_reads": 0, "input_bases": 0, "output_reads": 0, "output_bases": 0}
+    write_fastq(
+        args.output,
+        filter_reads(
+            parse_fastq(args.input),
+            kscore_ok,
+            counter,
+            k=args.kmer_size,
+            min_kscore=args.min_kscore,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
+        ),
     )
+    return {"filter_kscore": counter}
 
 
 def filter_seq_ids_subcommand(args):
     seq_ids = set(parse_seq_ids(args.idsfile))
-
-    def transform(reads):
-        return filter_paired(reads, seq_id_ok, seq_ids=seq_ids, keep=args.keep_ids)
-
-    _run_paired_command(
-        args,
-        transform,
+    counter = {"input_reads": 0, "input_bases": 0, "output_reads": 0, "output_bases": 0}
+    write_fastq(
+        args.output,
+        filter_reads(
+            parse_fastq(args.input),
+            seq_id_ok,
+            counter,
+            seq_ids=seq_ids,
+            keep=args.keep_ids,
+            threads=args.threads,
+            chunk_size=args.chunk_size,
+        ),
     )
-
-
-def _trim_quality_pipeline(
-    reads,
-    *,
-    window_width,
-    window_threshold,
-    start_threshold,
-    end_threshold,
-    min_length,
-):
-    trimmed_moving_average_reads = map_paired(
-        reads, trim_moving_average, k=window_width, threshold=window_threshold
-    )
-    trimmed_ends_reads = map_paired(
-        trimmed_moving_average_reads,
-        trim_ends,
-        threshold_start=start_threshold,
-        threshold_end=end_threshold,
-    )
-    return filter_paired(trimmed_ends_reads, length_ok, threshold=min_length)
+    return {"filter_seq_ids": counter}
 
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False, formatter_class=HFQFormatter)
@@ -175,6 +188,21 @@ fastq_io_parser.add_argument(
     nargs="*",
     default=[sys.stdout],
     help="Output FASTQs, can be gzipped (default: stdout)",
+)
+fastq_io_parser.add_argument(
+    "--report",
+    type=argparse.FileType("w"),
+    default=sys.stderr,
+    help="Output report file",
+)
+fastq_io_parser.add_argument(
+    "--threads", type=int, default=1, help="Number of threads to use (default: 1)"
+)
+fastq_io_parser.add_argument(
+    "--chunk-size",
+    type=int,
+    default=1000,
+    help="Number of reads processed per worker chunk (default: 1000)",
 )
 
 
@@ -314,8 +342,38 @@ def heyfastq_main(argv=None):
     subsample_parser.set_defaults(func=subsample_subcommand)
 
     args = main_parser.parse_args(argv)
-    if args.input is None:  # pragma: no cover
+
+    # This closers list is a pretty convoluted mechanism to ensure that all opened files and pipes are closed after use
+    # It handles everything from sys.stdin/out (no closing necessary) to subprocess pipes (need to close stream handlers and wait for process to end)
+    # So we attach a closer function to each opened input/output file handler and call them all at the end
+    closers = []
+    if args.input is None:
         args.input = sys.stdin
-    if args.output is None:  # pragma: no cover
+    else:
+        for i in args.input:
+            closers.append(i[1])
+        args.input = [i[0] for i in args.input]
+    if args.output is None:
         args.output = sys.stdout
-    args.func(args)
+    else:
+        for o in args.output:
+            closers.append(o[1])
+        args.output = [o[0] for o in args.output]
+    if args.threads is None:
+        args.threads = 1
+
+    # Run the main logic
+    stats = args.func(args)
+
+    # Construct report and write as json
+    report = {"version": __version__}
+    for k, v in vars(args).items():
+        if k not in ("input", "output", "func", "idsfile", "report", "threads"):
+            report[k] = v
+
+    report.update(stats)
+    json.dump(report, args.report, indent=4)
+
+    # Close all opened files/pipes
+    for c in closers:
+        c()

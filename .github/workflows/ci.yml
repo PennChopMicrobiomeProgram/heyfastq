@@ -49,4 +49,4 @@ jobs:
           python -m pip install .
 
       - name: Run pytest
-        run: pytest -s -vvvv -l --tb=long src/heyfastqlib/test
+        run: pytest -s -vvvv -l --tb=long tests

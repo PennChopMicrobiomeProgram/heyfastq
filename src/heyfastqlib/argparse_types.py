@@ -1,6 +1,10 @@
-import gzip
-import sys
 import argparse
+import gzip
+import io
+import os
+import shutil
+import subprocess as sp
+import sys
 
 
 class GzipFileType(object):
@@ -28,15 +32,103 @@ class GzipFileType(object):
         self._encoding = encoding
         self._errors = errors
 
+    def open_gzip(self, filename):
+        compression = os.environ.get("HFQ_GZIP_COMPRESSION", "4")
+        if not compression.isdigit() or not (0 <= int(compression) <= 9):
+            print(f"Invalid HFQ_GZIP_COMPRESSION value{(compression)}, using default 4")
+            compression = "4"
+        pigz = shutil.which("pigz")
+
+        if pigz is not None:
+            binary_mode = "b" in self._mode
+
+            if "r" in self._mode:
+                p = sp.Popen(
+                    [pigz, f"-{compression}", "-dc", filename],
+                    stdout=sp.PIPE,
+                    bufsize=self._bufsize,
+                )
+
+                raw_stdout = p.stdout
+                if raw_stdout is None:
+                    raise ValueError("pigz stdout unavailable")
+
+                if binary_mode:
+                    stream = raw_stdout
+                else:
+                    stream = io.TextIOWrapper(
+                        raw_stdout,
+                        encoding=self._encoding,
+                        errors=self._errors,
+                    )
+
+                def close():
+                    if binary_mode:
+                        raw_stdout.close()
+                    else:
+                        stream.close()
+                    p.wait()
+
+                return stream, close
+            elif any(c in self._mode for c in "wax"):
+                p = sp.Popen(
+                    [pigz, f"-{compression}", "-c"],
+                    stdin=sp.PIPE,
+                    stdout=open(
+                        filename,
+                        "wb",
+                        self._bufsize,
+                    ),
+                    bufsize=self._bufsize,
+                )
+
+                raw_stdin = p.stdin
+                if raw_stdin is None:
+                    raise ValueError("pigz stdin unavailable")
+
+                if binary_mode:
+                    stream = raw_stdin
+                else:
+                    stream = io.TextIOWrapper(
+                        raw_stdin,
+                        encoding=self._encoding,
+                        errors=self._errors,
+                    )
+
+                def close():
+                    if binary_mode:
+                        raw_stdin.close()
+                    else:
+                        stream.close()
+                    p.wait()
+
+                return stream, close
+            else:
+                raise ValueError(f"invalid mode for gzip file: {self._mode}")
+        else:
+            f = gzip.open(
+                filename,
+                self._mode + "t",
+                int(compression),
+                self._encoding,
+                self._errors,
+            )
+
+            return f, f.close
+
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
         if string == "-":
             if "r" in self._mode:
-                return sys.stdin.buffer if "b" in self._mode else sys.stdin
+                return sys.stdin.buffer, None if "b" in self._mode else sys.stdin, None
             elif any(c in self._mode for c in "wax"):
-                return sys.stdout.buffer if "b" in self._mode else sys.stdout
+                return (
+                    sys.stdout.buffer,
+                    None if "b" in self._mode else sys.stdout,
+                    None,
+                )
             else:
-                msg = f'argument "-" with mode {self.mode}'
+                msg = f'argument "-" with mode {self._mode}'
                 raise ValueError(msg)
 
         # all other arguments are used as file names
@@ -48,19 +140,19 @@ class GzipFileType(object):
                 gzipped = string.endswith(".gz")
 
             if gzipped:
-                f = gzip.open(
-                    string,
-                    f"{self._mode}t",
-                    self._bufsize,
-                    self._encoding,
-                    self._errors,
-                )
+                f, close = self.open_gzip(string)
             else:
                 f = open(
                     string, self._mode, self._bufsize, self._encoding, self._errors
                 )
+                close = f.close
 
-            return f
+            if f is None:
+                raise argparse.ArgumentTypeError(
+                    f"can't open {string} with mode {self._mode}"
+                )
+
+            return f, close
         except OSError as e:
             args = {"filename": string, "error": e}
             message = f"can't open {args['filename']}: {args['error']}"

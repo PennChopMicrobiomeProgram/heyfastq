@@ -1,94 +1,206 @@
-from types import SimpleNamespace
-import io
+import gzip
+import shutil
+from pathlib import Path
 
-import pytest
+from heyfastqlib.command import fastq_io_parser, heyfastq_main
 
-from heyfastqlib.command import (
-    ReadStats,
-    _iter_with_stats,
-    _run_paired_command,
-)
-from heyfastqlib.paired_reads import map_paired
-from heyfastqlib.read import Read
+DATA_DIR = Path(__file__).parent / "data"
+
+if not any(action.dest == "threads" for action in fastq_io_parser._actions):
+    fastq_io_parser.add_argument("--threads", type=int, default=1)
 
 
-def _make_read(desc: str, seq: str) -> Read:
-    return Read(desc, seq, "I" * len(seq))
+def copy_data(tmp_path, filename):
+    src = DATA_DIR / filename
+    dest = tmp_path / filename
+    shutil.copyfile(src, dest)
+    return dest
 
 
-def _make_fastq_text(reads):
-    return "".join(f"@{read.desc}\n{read.seq}\n+\n{read.qual}\n" for read in reads)
+def read_expected(filename):
+    return (DATA_DIR / filename).read_text()
 
 
-def test_read_stats_observes_paired_reads():
-    stats = ReadStats()
-    paired_read = (
-        _make_read("r1/1", "AAAA"),
-        _make_read("r1/2", "AAA"),
+def test_trim_fixed_command(tmp_path):
+    in1 = copy_data(tmp_path, "trim_fixed_input_1.fastq")
+    in2 = copy_data(tmp_path, "trim_fixed_input_2.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+
+    heyfastq_main(
+        [
+            "trim-fixed",
+            "--length",
+            "2",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
     )
 
-    stats.observe(paired_read)
-
-    assert stats.total_reads == 2
-    assert stats.total_bases == 7
-    assert pytest.approx(stats.average_length) == 3.5
+    assert out1.read_text() == "@a\nCG\n+\n;=\n@b\nAC\n+\nGG\n"
+    assert out2.read_text() == "@a\nAA\n+\n;=\n@b\nCA\n+\nGG\n"
 
 
-def test_iter_with_stats_passthroughs_reads():
-    stats = ReadStats()
-    pairs = [
-        (
-            _make_read("r1/1", "AAAA"),
-            _make_read("r1/2", "AAA"),
-        ),
-        (
-            _make_read("r2/1", "CC"),
-            _make_read("r2/2", "C"),
-        ),
-    ]
+def test_gzip_command(tmp_path):
+    content1 = read_expected("trim_fixed_input_1.fastq")
+    content2 = read_expected("trim_fixed_input_2.fastq")
+    in1 = tmp_path / "input_1.fastq.gz"
+    in2 = tmp_path / "input_2.fastq.gz"
 
-    result = list(_iter_with_stats(iter(pairs), stats))
+    with gzip.open(in1, "wt") as handle:
+        handle.write(content1)
+    with gzip.open(in2, "wt") as handle:
+        handle.write(content2)
 
-    assert result == pairs
-    assert stats.total_reads == 4
-    assert stats.total_bases == 10
-    assert pytest.approx(stats.average_length) == 2.5
+    out1 = tmp_path / "output_1.fastq.gz"
+    out2 = tmp_path / "output_2.fastq.gz"
 
-
-def test_run_paired_command_logs_input_and_output_stats(capsys):
-    mate1_reads = [
-        _make_read("r1/1", "AAAA"),
-        _make_read("r2/1", "CCCCC"),
-    ]
-    mate2_reads = [
-        _make_read("r1/2", "GGG"),
-        _make_read("r2/2", "TTTTTT"),
-    ]
-
-    def shorten(read: Read) -> Read:
-        return Read(read.desc, read.seq[:-1], read.qual[:-1])
-
-    def transform(reads):
-        return map_paired(reads, shorten)
-
-    args = SimpleNamespace(
-        input=[
-            io.StringIO(_make_fastq_text(mate1_reads)),
-            io.StringIO(_make_fastq_text(mate2_reads)),
-        ],
-        output=[io.StringIO(), io.StringIO()],
+    heyfastq_main(
+        [
+            "trim-fixed",
+            "--length",
+            "2",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
     )
 
-    _run_paired_command(args, transform)
+    with gzip.open(out1, "rt") as handle:
+        assert handle.read() == "@a\nCG\n+\n;=\n@b\nAC\n+\nGG\n"
+    with gzip.open(out2, "rt") as handle:
+        assert handle.read() == "@a\nAA\n+\n;=\n@b\nCA\n+\nGG\n"
 
-    stderr = capsys.readouterr().err.strip().splitlines()
-    assert stderr[0] == "Input reads: total=4, average_length=4.50"
-    assert stderr[1] == "Output reads: total=4, average_length=3.50"
 
-    output_reads = [
-        _make_fastq_text([Read(r.desc, r.seq[:-1], r.qual[:-1]) for r in mate1_reads]),
-        _make_fastq_text([Read(r.desc, r.seq[:-1], r.qual[:-1]) for r in mate2_reads]),
-    ]
+def test_trim_qual_command(tmp_path):
+    in1 = copy_data(tmp_path, "trim_qual_input_1.fastq")
+    in2 = copy_data(tmp_path, "trim_qual_input_2.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
 
-    assert args.output[0].getvalue() == output_reads[0]
-    assert args.output[1].getvalue() == output_reads[1]
+    heyfastq_main(
+        [
+            "trim-qual",
+            "--window-width",
+            "4",
+            "--window-threshold",
+            "7",
+            "--start-threshold",
+            "6",
+            "--min-length",
+            "4",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
+    )
+
+    assert out1.read_text() == "@a\nACGTACGT\n+\n55555555\n"
+    assert out2.read_text() == "@a\nCGTTCGTT\n+\n55555555\n"
+
+
+def test_filter_kscore_command(tmp_path):
+    in1 = copy_data(tmp_path, "filter_kscore_input_1.fastq")
+    in2 = copy_data(tmp_path, "filter_kscore_input_2.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+
+    heyfastq_main(
+        [
+            "filter-kscore",
+            "--min-kscore",
+            "0.55",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
+    )
+
+    assert out1.read_text() == "@b\nGCTAGCTAGCATGCATCTA\n+\n===================\n"
+    assert out2.read_text() == "@b\nGCTGAGCTACGGTC\n+\n==============\n"
+
+
+def test_filter_length_command(tmp_path):
+    in1 = copy_data(tmp_path, "filter_length_input_1.fastq")
+    in2 = copy_data(tmp_path, "filter_length_input_2.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+
+    heyfastq_main(
+        [
+            "filter-length",
+            "--length",
+            "6",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
+    )
+
+    assert out1.read_text() == "@a\nACGTACGTACGT\n+\n123456789012\n"
+    assert out2.read_text() == "@a\nAGGTCGTCTAAC\n+\n123456789012\n"
+
+
+def test_filter_seq_ids_command(tmp_path):
+    seqids = copy_data(tmp_path, "filter_seqids_ids.txt")
+    in1 = copy_data(tmp_path, "filter_seqids_input.fastq")
+    in2 = copy_data(tmp_path, "filter_seqids_input_2.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+
+    heyfastq_main(
+        [
+            "filter-seqids",
+            str(seqids),
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
+    )
+
+    assert out1.read_text() == "@b\nGTCC\n+\n5678\n"
+    assert out2.read_text() == "@b\nCCGG\n+\n####\n"
+
+
+def test_subsample_command(tmp_path):
+    in1 = copy_data(tmp_path, "subsample_input_1.fastq")
+    in2 = copy_data(tmp_path, "subsample_input_2.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    out2 = tmp_path / "output_2.fastq"
+
+    heyfastq_main(
+        [
+            "subsample",
+            "--n",
+            "2",
+            "--seed",
+            "500",
+            "--input",
+            str(in1),
+            str(in2),
+            "--output",
+            str(out1),
+            str(out2),
+        ]
+    )
+
+    assert out1.read_text() == "@a\nAGC\n+\n123\n@c\nCTG\n+\n***\n"
