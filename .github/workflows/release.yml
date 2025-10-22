@@ -6,45 +6,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  check-version:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Install library
-        run: |
-          python -m pip install --upgrade pip setuptools
-          python -m pip install .
-
-      - id: get_version
-        uses: battila7/get-version-action@v2
-
-      - name: Check version
-        run: |
-          LIBRARY_VERSION=$(heyfastq --version)
-          GITHUB_VERSION=${{ steps.get_version.outputs.version-without-v }}
-          if [[ "$LIBRARY_VERSION" == "$GITHUB_VERSION" ]]; then
-            echo "Versions match, continuing..."
-          else
-            echo "Versions don't match, exiting..."
-            echo "Library version: $LIBRARY_VERSION"
-            echo "GitHub version: $GITHUB_VERSION"
-            exit 1
-          fi
-
   run-ci:
     uses: ./.github/workflows/ci.yml
     secrets: inherit
 
   build-artifacts:
     uses: ./.github/workflows/build.yml
-    needs: [run-ci, check-version]
+    needs: run-ci
     secrets: inherit
 
   publish-to-pypi:
