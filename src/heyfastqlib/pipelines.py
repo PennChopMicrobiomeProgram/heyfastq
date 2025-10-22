@@ -142,5 +142,3 @@ def map_reads(
             _merge_counters(counter, chunk_counter)
             for r in out_chunk:
                 yield r
-
-
