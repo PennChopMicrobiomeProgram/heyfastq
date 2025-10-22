@@ -1,9 +1,8 @@
 from itertools import islice
 from multiprocessing import Pool
-from typing import Callable, Iterable, Iterator, Optional
+from typing import Callable, Iterable, Iterator
 
 from .read import count_bases, R, ReadPipe
-from .util import subsample
 
 
 CounterDict = dict[str, int]
@@ -145,29 +144,3 @@ def map_reads(
                 yield r
 
 
-def subsample_reads(
-    rs: ReadPipe[R],
-    l: int,
-    n: int,
-    seed: Optional[int],
-    *,
-    counter: Optional[CounterDict] = None,
-) -> ReadPipe[R]:
-    """
-    Subsample is a weird one because it requires working with a full list of reads' indexes in memory
-    Doesn't really fit with the pipeline model
-    """
-    idxs = set(subsample(list(range(l)), n, seed))
-    for i, r in enumerate(rs):
-        bases = None
-        if counter is not None:
-            counter["input_reads"] += 1
-            bases = count_bases(r)
-            counter["input_bases"] += bases
-        if i in idxs:
-            if counter is not None:
-                if bases is None:
-                    bases = count_bases(r)
-                counter["output_reads"] += 1
-                counter["output_bases"] += bases
-            yield r

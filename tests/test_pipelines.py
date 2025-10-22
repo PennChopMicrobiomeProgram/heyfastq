@@ -1,6 +1,7 @@
 from collections.abc import Iterable
+from itertools import count
 
-from heyfastqlib.pipelines import filter_reads, map_reads, subsample_reads
+from heyfastqlib.pipelines import filter_reads, map_reads
 from heyfastqlib.read import Read, trim, length_ok
 from heyfastqlib.util import subsample as util_subsample
 
@@ -180,7 +181,7 @@ def test_map_reads_multiprocess_matches_single_thread():
     }
 
 
-def test_subsample_reads_is_deterministic():
+def test_filter_reads_supports_subsampling():
     reads = [
         Read("r0", "AAA", "!!!"),
         Read("r1", "CCC", "!!!"),
@@ -192,8 +193,22 @@ def test_subsample_reads_is_deterministic():
     sample_size = 3
     seed = 13
     expected_indexes = util_subsample(list(range(length)), sample_size, seed)
+    indexes = set(expected_indexes)
+    index_counter = count()
+    counter = make_counter()
+    total_bases = sum(len(r.seq) for r in reads)
+    sampled_bases = sum(len(reads[i].seq) for i in expected_indexes)
 
-    sampled = list(subsample_reads(iter_pipe(reads), length, sample_size, seed))
+    def keep_read(_: Read, *, _indexes=indexes, _counter=index_counter) -> bool:
+        return next(_counter) in _indexes
+
+    sampled = list(filter_reads(iter_pipe(reads), keep_read, counter))
 
     assert sampled == [reads[i] for i in expected_indexes]
     assert len(sampled) == sample_size
+    assert counter == {
+        "input_reads": length,
+        "input_bases": total_bases,
+        "output_reads": sample_size,
+        "output_bases": sampled_bases,
+    }
