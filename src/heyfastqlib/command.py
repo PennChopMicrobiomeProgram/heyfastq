@@ -115,9 +115,9 @@ def trim_qual_subcommand(args):
     )
     write_fastq(args.output, reads)
     return {
-        "filter_length": length_counter,
-        "trim_ends": trim_ends_counter,
         "trim_avg": trim_avg_counter,
+        "trim_ends": trim_ends_counter,
+        "filter_length": length_counter,
     }
 
 
