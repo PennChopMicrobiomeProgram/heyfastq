@@ -3,7 +3,7 @@
 <!-- Badges start -->
 [![CI](https://github.com/PennChopMicrobiomeProgram/heyfastq/actions/workflows/ci.yml/badge.svg)](https://github.com/PennChopMicrobiomeProgram/heyfastq/actions/workflows/ci.yml)
 [![PyPI version](https://badge.fury.io/py/heyfastq.svg)](https://pypi.org/project/heyfastq/)
-[![DockerHub](https://img.shields.io/docker/pulls/ctbushman/heyfastq)](https://hub.docker.com/repository/docker/ctbushman/heyfastq/)
+[![DockerHub](https://img.shields.io/docker/pulls/chopmicrobiome/heyfastq)](https://hub.docker.com/repository/docker/chopmicrobiome/heyfastq/)
 <!-- Badges end -->
 
 FASTQ sequence file utilities, written in pure Python, with no
