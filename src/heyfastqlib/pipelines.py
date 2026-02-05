@@ -4,7 +4,6 @@ from typing import Callable, Iterable, Iterator
 
 from .read import count_bases, R, ReadPipe
 
-
 CounterDict = dict[str, int]
 
 
