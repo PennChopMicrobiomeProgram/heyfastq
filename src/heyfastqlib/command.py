@@ -3,6 +3,7 @@ import json
 import operator
 import signal
 import sys
+from contextlib import nullcontext
 from itertools import count
 from . import __version__
 from .argparse_types import GzipFileType, HFQFormatter
@@ -157,7 +158,8 @@ def filter_kscore_subcommand(args):
 
 
 def filter_seq_ids_subcommand(args):
-    seq_ids = set(parse_seq_ids(args.idsfile))
+    with open(args.idsfile) as f:
+        seq_ids = set(parse_seq_ids(f))
     counter = {"input_reads": 0, "input_bases": 0, "output_reads": 0, "output_bases": 0}
     write_fastq(
         args.output,
@@ -191,8 +193,6 @@ fastq_io_parser.add_argument(
 )
 fastq_io_parser.add_argument(
     "--report",
-    type=argparse.FileType("w"),
-    default=sys.stderr,
     help="Output report file",
 )
 fastq_io_parser.add_argument(
@@ -321,7 +321,6 @@ def heyfastq_main(argv=None):
     )
     filter_seq_ids_parser.add_argument(
         "idsfile",
-        type=argparse.FileType("r"),
         help="File containing sequence ids, one per line",
     )
     filter_seq_ids_parser.add_argument(
@@ -370,9 +369,14 @@ def heyfastq_main(argv=None):
     for k, v in vars(args).items():
         if k not in ("input", "output", "func", "idsfile", "report", "threads"):
             report[k] = v
-
     report.update(stats)
-    json.dump(report, args.report, indent=4)
+
+    if args.report is not None:
+        report_file = open(args.report, "w")
+    else:
+        report_file = nullcontext(sys.stderr)
+    with report_file as f:
+        json.dump(report, f, indent=4)
 
     # Close all opened files/pipes
     for c in closers:
