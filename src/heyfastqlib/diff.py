@@ -50,19 +50,19 @@ def diff_offset(seq1, seq2):
     if len1 == len2:
         if seq1 == seq2:
             return 0
-        return best_hamming(seq1, seq2)
+        return best_offset(seq1, seq2)
     if len1 > len2:
         find1 = seq1.find(seq2)
         if find1 >= 0:
             return find1
-        return best_hamming(seq1, seq2)
+        return best_offset(seq1, seq2)
     if len2 > len1:
         find2 = seq2.find(seq1)
         if find2 >= 0:
             #    AGCTCC
             # GGCAGCTCC find2 = 3, offset = -3
             return -find2
-        return -best_hamming(seq2, seq1)
+        return -best_offset(seq2, seq1)
 
 
 def idx_minimum(xs):
@@ -71,7 +71,7 @@ def idx_minimum(xs):
 
 
 def best_offset(long_seq, short_seq):
-    ds = list(hamming_dists(long_seq, short_seq))
+    ds = list(offset_dists(long_seq, short_seq))
     return idx_minimum(ds)
 
 

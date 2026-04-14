@@ -41,6 +41,10 @@ def test_diff_extend_both():
     a2 = "ATCGCGTCA"
     assert diff_offset(a1, a2) == -2
 
+def test_diff_empty():
+    assert diff_offset("ACGT", "") == 0
+    assert diff_offset("", "AGTC") == 0
+    
 def test_diff_format():
     d = FastqDiff("read1", "GCTCA", "AGCCCA", -1)
     assert list(d.format()) == [
@@ -50,6 +54,15 @@ def test_diff_format():
         "  AGCCCA",
     ]
 
+def test_diff_format_empty():
+    d = FastqDiff("a", "GCATCG", "", 0)
+    assert list(d.format()) == [
+        "a",
+        "  GCATCG",
+        "        ",
+        "        ",
+    ]
+    
 def test_diff_from_reads():
     a = Read("read1", "CGCGT", ".....")
     b = Read("read1", "ATCGCGTCA", ".........")

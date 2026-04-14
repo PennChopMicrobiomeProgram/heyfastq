@@ -12,10 +12,13 @@ from .io import (
     parse_fastq,
     write_fastq,
     parse_seq_ids,
+    parse_fastq_single,
 )
 from .pipelines import filter_reads, map_reads
 from .read import (
+    Read,
     trim,
+    seq_id,
     kscore_ok,
     length_ok,
     seq_id_ok,
@@ -23,6 +26,7 @@ from .read import (
     trim_ends,
 )
 from .util import subsample
+from .diff import FastqDiff
 
 
 def subsample_subcommand(args):
@@ -175,6 +179,32 @@ def filter_seq_ids_subcommand(args):
     )
     return {"filter_seq_ids": counter}
 
+def diff_subcommand(args):
+    fout = args.output[0]
+    nreads = 0
+
+    with open(args.reference) as fref:
+        refs = {seq_id(r): r for r in parse_fastq_single(fref)}
+    
+    for r2 in parse_fastq_single(args.input[0]):
+        print(r2)
+        r2_id = seq_id(r2)
+        ref = refs.pop(r2_id, Read(r2_id, "", ""))
+        d = FastqDiff.from_reads(ref, r2)
+        for line in d.format():
+            print(line)
+            fout.write(line)
+            fout.write("\n")
+        nreads += 1
+    for ref_id, ref in refs.items():
+        r2 = Read(ref_id, "", "")
+        d = FastqDiff.from_reads(ref, r2)
+        for line in d.format():
+            print(line)
+            fout.write(line)
+            fout.write("\n")
+        nreads += 1
+    return {"nreads": nreads}
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False, formatter_class=HFQFormatter)
 fastq_io_parser.add_argument(
@@ -340,6 +370,24 @@ def heyfastq_main(argv=None):
     subsample_parser.add_argument("--seed", type=int, help="Random seed")
     subsample_parser.set_defaults(func=subsample_subcommand)
 
+    diff_parser = subparsers.add_parser(
+        "diff",
+        parents=[fastq_io_parser],
+        formatter_class=HFQFormatter,
+        help="Find defferences between FASTQ files",
+    )
+    diff_parser.add_argument(
+        "--reference",
+        type=str,
+        help="Reference FASTQ",
+    )
+    diff_parser.add_argument(
+        "--diffout",
+        type=str,
+        help="Diff output",
+    )
+    diff_parser.set_defaults(func=diff_subcommand)
+    
     args = main_parser.parse_args(argv)
 
     # This closers list is a pretty convoluted mechanism to ensure that all opened files and pipes are closed after use
@@ -367,7 +415,7 @@ def heyfastq_main(argv=None):
     # Construct report and write as json
     report = {"version": __version__}
     for k, v in vars(args).items():
-        if k not in ("input", "output", "func", "idsfile", "report", "threads"):
+        if k not in ("input", "output", "func", "idsfile", "report", "threads", "reference", "diffout"):
             report[k] = v
     report.update(stats)
 
