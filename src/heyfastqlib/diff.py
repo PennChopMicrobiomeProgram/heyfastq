@@ -3,14 +3,92 @@ from dataclasses import dataclass
 
 from .read import seq_id
 
+def fastq_diff(reference_reads, input_reads):
+    refs = {seq_id(r): r for r in reference_reads}
+    for read in input_reads:
+        read_id = seq_id(read)
+        ref = refs.pop(read_id)
+        if ref is None:
+            yield ReadAdded.from_read(read)
+        else:
+            yield ReadAligned.from_reads(ref, read)
+    for ref in refs.values():
+        yield ReadRemoved.from_read(ref)
+
+
+class FastqDiffResult:
+    field_names = [
+        "read_id",
+        "status",
+        "left_trim",
+        "left_extend",
+        "right_trim",
+        "right_extend",
+        "mismatches",
+    ]
+
+    @classmethod
+    def format_tsv_header(cls):
+        return "\t".join(cls.field_names) + "\n"
+
+    field_attrs = [
+        "seq_id",
+        "status",
+        "left_trim",
+        "left_extend",
+        "right_trim",
+        "right_extend",
+        "mismatches_format",
+    ]
+
+    def format_tsv(self):
+        vals = [getattr(self, a) for a in self.field_attrs]
+        return "\t".join(vals) + "\n"
+
 
 @dataclass
-class FastqDiff:
+class ReadRemoved(FastqDiffResult):
+    seq_id: str
+    seq1: str
+
+    status = "removed"
+    left_trim = ""
+    left_extend = ""
+    right_trim = ""
+    right_extend = ""
+    mismatches_format = ""
+
+    @classmethod
+    def from_read(cls, read):
+        return cls(seq_id(read), read.seq)
+
+
+@dataclass
+class ReadAdded(FastqDiffResult):
+    seq_id: str
+    seq2: str
+
+    status = "added"
+    left_trim = ""
+    left_extend = ""
+    right_trim = ""
+    right_extend = ""
+    mismatches_format = ""
+
+    @classmethod
+    def from_read(cls, read):
+        return cls(seq_id(read), read.seq)
+
+
+@dataclass
+class ReadAligned(FastqDiffResult):
     seq_id: str
     seq1: str
     seq2: str
     # Coordinate on seq1 where seq2 begins
     offset: int
+
+    status = "aligned"
 
     @property
     def overlap_length(self):
@@ -77,33 +155,10 @@ class FastqDiff:
             if c1 != c2:
                 yield (idx, c1, c2)
             idx += 1
-
     @property
     def mismatches_format(self):
         mm = [",".join(map(str, cs)) for cs in self.mismatches]
         return ";".join(mm)
-
-    field_names = [
-        "read_id",
-        "left_trim",
-        "left_extend",
-        "right_trim",
-        "right_extend",
-        "mismatches",
-    ]
-
-    field_attrs = [
-        "seq_id",
-        "left_trim",
-        "left_extend",
-        "right_trim",
-        "right_extend",
-        "mismatches_format",
-    ]
-
-    def format_tsv(self):
-        vals = [getattr(self, a) for a in self.field_attrs]
-        return "\t".join(vals) + "\n"
 
     def format_alignment(self, indent=2):
         indent_str = " " * indent

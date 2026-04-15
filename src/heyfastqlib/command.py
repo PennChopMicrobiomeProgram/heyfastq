@@ -26,7 +26,7 @@ from .read import (
     trim_ends,
 )
 from .util import subsample
-from .diff import FastqDiff
+from .diff import fastq_diff, FastqDiffResult
 
 
 def subsample_subcommand(args):
@@ -179,26 +179,20 @@ def filter_seq_ids_subcommand(args):
     )
     return {"filter_seq_ids": counter}
 
+
 def diff_subcommand(args):
     fout = args.output[0]
     nreads = 0
+    reads = parse_fastq_single(args.input[0])
 
+    fout.write(FastqDiffResult.format_tsv_header())
     with open(args.reference) as fref:
-        refs = {seq_id(r): r for r in parse_fastq_single(fref)}
-    
-    for r2 in parse_fastq_single(args.input[0]):
-        print(r2)
-        r2_id = seq_id(r2)
-        ref = refs.pop(r2_id, Read(r2_id, "", ""))
-        d = FastqDiff.from_reads(ref, r2)
-        fout.write(d.format_alignment())
-        nreads += 1
-    for ref_id, ref in refs.items():
-        r2 = Read(ref_id, "", "")
-        d = FastqDiff.from_reads(ref, r2)
-        fout.write(d.format_alignment())
-        nreads += 1
+        refs = parse_fastq_single(fref)
+        for result in fastq_diff(refs, reads):
+            fout.write(result.format_tsv())
+            nreads += 1
     return {"nreads": nreads}
+
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False, formatter_class=HFQFormatter)
 fastq_io_parser.add_argument(

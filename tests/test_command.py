@@ -24,7 +24,7 @@ def read_expected(filename):
 def test_diff_command(tmp_path):
     reference_fp = tmp_path / "read1.fastq"
     with open(reference_fp, "w") as f:
-        f.write("@a\nCGTGACA\n+\n.......\n")
+        f.write("@a\nCATGACA\n+\n.......\n")
         f.write("@b\nGGGGG\n+\n.....\n")
 
     input_fp = tmp_path / "read2.fastq"
@@ -44,8 +44,10 @@ def test_diff_command(tmp_path):
         ]
     )
     assert output_fp.read_text() == (
-        "a\n  CGTGACA\n  |||||  \n  CGTGA  \n"
-        "b\n  GGGGG\n       \n       \n"
+        "read_id\tstatus\tleft_trim\tleft_extend\t"
+        "right_trim\tright_extend\tmismatches\n"
+        "a\taligned\t\t\tCA\t\t1,A,G\n"
+        "b\tremoved\t\t\t\t\t\n"
     )
 
 
