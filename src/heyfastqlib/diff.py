@@ -3,25 +3,127 @@ from dataclasses import dataclass
 
 from .read import seq_id
 
+
 @dataclass
 class FastqDiff:
     seq_id: str
     seq1: str
     seq2: str
+    # Coordinate on seq1 where seq2 begins
     offset: int
 
-    def format(self):
-        out1, middle, out2 = zip(*self._format_zip())
-        yield self.seq_id
-        yield "  " + "".join(out1)
-        yield "  " + "".join(middle)
-        yield "  " + "".join(out2)
+    @property
+    def overlap_length(self):
+        return min(len(self.seq1), len(self.seq2))
 
-    def _format_zip(self):
+    # AGCTCGAT
+    #   CTCG
+    # offset = 2
+    # left_trim = seq1[:2]
+    # aligned1 = seq1[2:6]
+    # right_trim = seq1[6:]
+
+    @property
+    def start_idx1(self):
+        return max(self.offset, 0)
+
+    @property
+    def end_idx1(self):
+        return self.start_idx1 + self.overlap_length
+
+    @property
+    def left_trim(self):
+        return self.seq1[: self.start_idx1]
+
+    @property
+    def aligned1(self):
+        return self.seq1[self.start_idx1 : self.end_idx1]
+
+    @property
+    def right_trim(self):
+        return self.seq1[self.end_idx1 :]
+
+    #   CTCG
+    # AGCTCGAT
+    # offset = -2
+    # left_extend = seq2[:2]
+    # overlap = seq2[2:6]
+    # right_extend = seq2[6:]
+
+    @property
+    def start_idx2(self):
+        return max(-self.offset, 0)
+
+    @property
+    def end_idx2(self):
+        return self.start_idx2 + self.overlap_length
+
+    @property
+    def left_extend(self):
+        return self.seq2[: self.start_idx2]
+
+    @property
+    def aligned2(self):
+        return self.seq2[self.start_idx2 : self.end_idx2]
+
+    @property
+    def right_extend(self):
+        return self.seq2[self.end_idx2 :]
+
+    @property
+    def mismatches(self):
+        idx = self.start_idx1
+        for c1, c2 in zip(self.aligned1, self.aligned2):
+            if c1 != c2:
+                yield (idx, c1, c2)
+            idx += 1
+
+    @property
+    def mismatches_format(self):
+        mm = [",".join(map(str, cs)) for cs in self.mismatches]
+        return ";".join(mm)
+
+    field_names = [
+        "read_id",
+        "left_trim",
+        "left_extend",
+        "right_trim",
+        "right_extend",
+        "mismatches",
+    ]
+
+    field_attrs = [
+        "seq_id",
+        "left_trim",
+        "left_extend",
+        "right_trim",
+        "right_extend",
+        "mismatches_format",
+    ]
+
+    def format_tsv(self):
+        vals = [getattr(self, a) for a in self.field_attrs]
+        return "\t".join(vals) + "\n"
+
+    def format_alignment(self, indent=2):
+        indent_str = " " * indent
+        aligned1, bars, aligned2 = self._alignment_seqs()
+        return (
+            f"{self.seq_id}\n"
+            f"{indent_str}{aligned1}\n"
+            f"{indent_str}{bars}\n"
+            f"{indent_str}{aligned2}\n"
+        )
+
+    def _alignment_seqs(self):
+        a1, bars, a2 = zip(*self._alignment_zip())
+        return ("".join(a1), "".join(bars), "".join(a2))
+
+    def _alignment_zip(self):
         for c1, c2 in self._sequence_zip():
             middle = "|" if c1 == c2 else " "
             yield (c1, middle, c2)
-        
+
     def _sequence_zip(self):
         seq1 = self.seq1
         if self.offset < 0:

@@ -191,18 +191,12 @@ def diff_subcommand(args):
         r2_id = seq_id(r2)
         ref = refs.pop(r2_id, Read(r2_id, "", ""))
         d = FastqDiff.from_reads(ref, r2)
-        for line in d.format():
-            print(line)
-            fout.write(line)
-            fout.write("\n")
+        fout.write(d.format_alignment())
         nreads += 1
     for ref_id, ref in refs.items():
         r2 = Read(ref_id, "", "")
         d = FastqDiff.from_reads(ref, r2)
-        for line in d.format():
-            print(line)
-            fout.write(line)
-            fout.write("\n")
+        fout.write(d.format_alignment())
         nreads += 1
     return {"nreads": nreads}
 
