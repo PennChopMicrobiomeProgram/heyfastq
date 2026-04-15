@@ -46,7 +46,7 @@ def test_diff_command(tmp_path):
     assert output_fp.read_text() == (
         "read_id\tstatus\tleft_trim\tleft_extend\t"
         "right_trim\tright_extend\tmismatches\n"
-        "a\taligned\t\t\tCA\t\t1,A,G\n"
+        "a\ttrim-right-mismatch\t\t\tCA\t\t1,A,G\n"
         "b\tremoved\t\t\t\t\t\n"
     )
 

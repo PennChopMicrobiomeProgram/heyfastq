@@ -88,7 +88,34 @@ class ReadAligned(FastqDiffResult):
     # Coordinate on seq1 where seq2 begins
     offset: int
 
-    status = "aligned"
+    _left_right_both = {
+        (True, False): "left",
+        (False, True): "right",
+        (True, True): "both",
+    }
+
+    @property
+    def status(self):
+        if self.seq1 == self.seq2:
+            return "same"
+        status_parts = []
+
+        trim_lr = (bool(self.left_trim), bool(self.right_trim))
+        trim_status = self._left_right_both.get(trim_lr)
+        if trim_status:
+            status_parts.append("trim")
+            status_parts.append(trim_status)
+
+        extend_lr = (bool(self.left_extend), bool(self.right_extend))
+        extend_status = self._left_right_both.get(extend_lr)
+        if extend_status:
+            status_parts.append("extend")
+            status_parts.append(extend_status)
+
+        if list(self.mismatches):
+            status_parts.append("mismatch")
+
+        return "-".join(status_parts)
 
     @property
     def overlap_length(self):
@@ -155,6 +182,7 @@ class ReadAligned(FastqDiffResult):
             if c1 != c2:
                 yield (idx, c1, c2)
             idx += 1
+
     @property
     def mismatches_format(self):
         mm = [",".join(map(str, cs)) for cs in self.mismatches]

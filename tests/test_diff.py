@@ -135,4 +135,4 @@ def test_diff_from_reads():
 
 def test_diff_format_tsv():
     d = ReadAligned("x", "ACGTG", "CAA", 1)
-    assert d.format_tsv() == "x\taligned\tA\t\tG\t\t2,G,A;3,T,A\n"
+    assert d.format_tsv() == "x\ttrim-both-mismatch\tA\t\tG\t\t2,G,A;3,T,A\n"
