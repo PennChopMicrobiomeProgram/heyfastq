@@ -1,14 +1,11 @@
 import itertools
 from dataclasses import dataclass
 
-from .read import seq_id
-
 
 def fastq_diff(reference_reads, input_reads):
-    refs = {seq_id(r): r for r in reference_reads}
+    refs = {r.id: r for r in reference_reads}
     for read in input_reads:
-        read_id = seq_id(read)
-        ref = refs.pop(read_id)
+        ref = refs.pop(read.id)
         if ref is None:
             yield ReadAdded.from_read(read)
         else:
@@ -61,7 +58,7 @@ class ReadRemoved(FastqDiffResult):
 
     @classmethod
     def from_read(cls, read):
-        return cls(seq_id(read), read.seq)
+        return cls(read.id, read.seq)
 
 
 @dataclass
@@ -78,7 +75,7 @@ class ReadAdded(FastqDiffResult):
 
     @classmethod
     def from_read(cls, read):
-        return cls(seq_id(read), read.seq)
+        return cls(read.id, read.seq)
 
 
 @dataclass
@@ -219,11 +216,8 @@ class ReadAligned(FastqDiffResult):
 
     @classmethod
     def from_reads(cls, r1, r2):
-        read_id = seq_id(r1)
-        seq1 = r1.seq
-        seq2 = r2.seq
-        offset = diff_offset(seq1, seq2)
-        return cls(read_id, seq1, seq2, offset)
+        offset = diff_offset(r1.seq, r2.seq)
+        return cls(r1.id, r1.seq, r2.seq, offset)
 
 
 def diff_offset(seq1, seq2):

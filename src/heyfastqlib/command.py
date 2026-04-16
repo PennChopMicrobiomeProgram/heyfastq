@@ -16,9 +16,7 @@ from .io import (
 )
 from .pipelines import filter_reads, map_reads
 from .read import (
-    Read,
     trim,
-    seq_id,
     kscore_ok,
     length_ok,
     seq_id_ok,
