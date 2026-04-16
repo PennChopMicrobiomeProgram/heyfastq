@@ -375,7 +375,7 @@ def heyfastq_main(argv=None):
         help="Diff output",
     )
     diff_parser.set_defaults(func=diff_subcommand)
-    
+
     args = main_parser.parse_args(argv)
 
     # This closers list is a pretty convoluted mechanism to ensure that all opened files and pipes are closed after use
@@ -403,7 +403,16 @@ def heyfastq_main(argv=None):
     # Construct report and write as json
     report = {"version": __version__}
     for k, v in vars(args).items():
-        if k not in ("input", "output", "func", "idsfile", "report", "threads", "reference", "diffout"):
+        if k not in (
+            "input",
+            "output",
+            "func",
+            "idsfile",
+            "report",
+            "threads",
+            "reference",
+            "diffout",
+        ):
             report[k] = v
     report.update(stats)
 

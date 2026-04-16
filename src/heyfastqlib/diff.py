@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from .read import seq_id
 
+
 def fastq_diff(reference_reads, input_reads):
     refs = {seq_id(r): r for r in reference_reads}
     for read in input_reads:
