@@ -21,6 +21,36 @@ def read_expected(filename):
     return (DATA_DIR / filename).read_text()
 
 
+def test_diff_command(tmp_path):
+    reference_fp = tmp_path / "read1.fastq"
+    with open(reference_fp, "w") as f:
+        f.write("@a\nCATGACA\n+\n.......\n")
+        f.write("@b\nGGGGG\n+\n.....\n")
+
+    input_fp = tmp_path / "read2.fastq"
+    with open(input_fp, "w") as f:
+        f.write("@a\nCGTGA\n+\n.....\n")
+
+    output_fp = tmp_path / "diff.txt"
+    heyfastq_main(
+        [
+            "diff",
+            "--input",
+            str(input_fp),
+            "--reference",
+            str(reference_fp),
+            "--output",
+            str(output_fp),
+        ]
+    )
+    assert output_fp.read_text() == (
+        "read_id\tstatus\tleft_trim\tleft_extend\t"
+        "right_trim\tright_extend\tmismatches\n"
+        "a\ttrim-right-mismatch\t\t\tCA\t\t1,A,G\n"
+        "b\tremoved\t\t\t\t\t\n"
+    )
+
+
 def test_trim_fixed_command(tmp_path):
     in1 = copy_data(tmp_path, "trim_fixed_input_1.fastq")
     in2 = copy_data(tmp_path, "trim_fixed_input_2.fastq")

@@ -11,6 +11,14 @@ from heyfastqlib.read import (
 )
 
 
+def test_read():
+    r = Read("a bc", "ATCGC", "12345")
+    assert r.desc == "a bc"
+    assert r.id == "a"
+    assert r.seq == "ATCGC"
+    assert r.qual == "12345"
+
+
 def test_length():
     assert length(Read("a", "ATCGC", "12345")) == 5
 

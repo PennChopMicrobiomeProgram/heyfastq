@@ -12,6 +12,7 @@ from .io import (
     parse_fastq,
     write_fastq,
     parse_seq_ids,
+    parse_fastq_single,
 )
 from .pipelines import filter_reads, map_reads
 from .read import (
@@ -23,6 +24,7 @@ from .read import (
     trim_ends,
 )
 from .util import subsample
+from .diff import fastq_diff, FastqDiffResult
 
 
 def subsample_subcommand(args):
@@ -174,6 +176,20 @@ def filter_seq_ids_subcommand(args):
         ),
     )
     return {"filter_seq_ids": counter}
+
+
+def diff_subcommand(args):
+    fout = args.output[0]
+    nreads = 0
+    reads = parse_fastq_single(args.input[0])
+
+    fout.write(FastqDiffResult.format_tsv_header())
+    with open(args.reference) as fref:
+        refs = parse_fastq_single(fref)
+        for result in fastq_diff(refs, reads):
+            fout.write(result.format_tsv())
+            nreads += 1
+    return {"nreads": nreads}
 
 
 fastq_io_parser = argparse.ArgumentParser(add_help=False, formatter_class=HFQFormatter)
@@ -340,6 +356,24 @@ def heyfastq_main(argv=None):
     subsample_parser.add_argument("--seed", type=int, help="Random seed")
     subsample_parser.set_defaults(func=subsample_subcommand)
 
+    diff_parser = subparsers.add_parser(
+        "diff",
+        parents=[fastq_io_parser],
+        formatter_class=HFQFormatter,
+        help="Find defferences between FASTQ files",
+    )
+    diff_parser.add_argument(
+        "--reference",
+        type=str,
+        help="Reference FASTQ",
+    )
+    diff_parser.add_argument(
+        "--diffout",
+        type=str,
+        help="Diff output",
+    )
+    diff_parser.set_defaults(func=diff_subcommand)
+
     args = main_parser.parse_args(argv)
 
     # This closers list is a pretty convoluted mechanism to ensure that all opened files and pipes are closed after use
@@ -367,7 +401,16 @@ def heyfastq_main(argv=None):
     # Construct report and write as json
     report = {"version": __version__}
     for k, v in vars(args).items():
-        if k not in ("input", "output", "func", "idsfile", "report", "threads"):
+        if k not in (
+            "input",
+            "output",
+            "func",
+            "idsfile",
+            "report",
+            "threads",
+            "reference",
+            "diffout",
+        ):
             report[k] = v
     report.update(stats)
 

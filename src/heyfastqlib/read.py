@@ -13,6 +13,10 @@ class Read:
     seq: str
     qual: str
 
+    @property
+    def id(self):
+        return self.desc.split()[0]
+
 
 ReadPair = Tuple[Read, Read]
 R = TypeVar("R", Read, ReadPair)
@@ -27,10 +31,6 @@ def count_bases(r: R) -> int:
         return len(r[0].seq)
     else:
         return len(r.seq)
-
-
-def seq_id(read: Read) -> str:
-    return read.desc.split()[0]
 
 
 def length(read: Read) -> int:
@@ -73,9 +73,9 @@ def length_ok(r: R, threshold: int = 100, cmp: Callable = operator.ge) -> bool:
 
 def seq_id_ok(r: R, seq_ids: set[str] = set(), keep: bool = False) -> bool:
     if isinstance(r, Read):
-        ids = set([seq_id(r)])
+        ids = set([r.id])
     elif isinstance(r, tuple):
-        ids = set([seq_id(read) for read in r])
+        ids = set([read.id for read in r])
 
     if keep:
         return all(id in seq_ids for id in ids)
