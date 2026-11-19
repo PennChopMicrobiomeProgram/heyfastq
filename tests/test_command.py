@@ -1,4 +1,5 @@
 import gzip
+import json
 import shutil
 from pathlib import Path
 
@@ -204,3 +205,87 @@ def test_subsample_command(tmp_path):
     )
 
     assert out1.read_text() == "@a\nAGC\n+\n123\n@c\nCTG\n+\n***\n"
+
+
+def test_trim_qual_command_single_end(tmp_path):
+    in1 = copy_data(tmp_path, "trim_qual_input_1.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    report = tmp_path / "report.json"
+
+    heyfastq_main(
+        [
+            "trim-qual",
+            "--window-width",
+            "4",
+            "--window-threshold",
+            "7",
+            "--start-threshold",
+            "6",
+            "--min-length",
+            "4",
+            "--input",
+            str(in1),
+            "--output",
+            str(out1),
+            "--report",
+            str(report),
+        ]
+    )
+
+    assert out1.read_text() == "@a\nACGTACGT\n+\n55555555\n"
+    stats = json.loads(report.read_text())
+    assert stats["trim_avg"]["input_reads"] == 1
+    assert stats["filter_length"]["output_reads"] == 1
+
+
+def test_filter_kscore_command_single_end(tmp_path):
+    in1 = copy_data(tmp_path, "filter_kscore_input_1.fastq")
+    out1 = tmp_path / "output_1.fastq"
+    report = tmp_path / "report.json"
+
+    heyfastq_main(
+        [
+            "filter-kscore",
+            "--min-kscore",
+            "0.55",
+            "--input",
+            str(in1),
+            "--output",
+            str(out1),
+            "--report",
+            str(report),
+        ]
+    )
+
+    assert out1.read_text() == "@b\nGCTAGCTAGCATGCATCTA\n+\n===================\n"
+    stats = json.loads(report.read_text())
+    assert stats["filter_kscore"]["input_reads"] == 2
+    assert stats["filter_kscore"]["output_reads"] == 1
+
+
+def test_filter_length_command_single_end_gzip(tmp_path):
+    in1 = tmp_path / "input_1.fastq.gz"
+    with gzip.open(in1, "wt") as handle:
+        handle.write(read_expected("filter_length_input_1.fastq"))
+    out1 = tmp_path / "output_1.fastq.gz"
+    report = tmp_path / "report.json"
+
+    heyfastq_main(
+        [
+            "filter-length",
+            "--length",
+            "6",
+            "--input",
+            str(in1),
+            "--output",
+            str(out1),
+            "--report",
+            str(report),
+        ]
+    )
+
+    with gzip.open(out1, "rt") as handle:
+        assert handle.read() == "@a\nACGTACGTACGT\n+\n123456789012\n"
+    stats = json.loads(report.read_text())
+    assert stats["filter_length"]["input_reads"] == 2
+    assert stats["filter_length"]["output_reads"] == 1

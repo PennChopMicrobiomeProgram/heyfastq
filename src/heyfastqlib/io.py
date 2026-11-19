@@ -17,6 +17,10 @@ def parse_fastq_single(f: TextIO) -> ReadPipe[Read]:
         yield Read(desc, seq, qual)
 
 
+def parse_fastq_paired(f1: TextIO, f2: TextIO) -> ReadPipe[ReadPair]:
+    yield from zip(parse_fastq_single(f1), parse_fastq_single(f2))
+
+
 @overload
 def parse_fastq(fs: tuple[TextIO]) -> ReadPipe[Read]: ...
 @overload
@@ -26,11 +30,13 @@ def parse_fastq(fs: tuple[TextIO, TextIO]) -> ReadPipe[ReadPair]: ...
 def parse_fastq(
     fs: Union[tuple[TextIO], tuple[TextIO, TextIO]],
 ) -> Union[ReadPipe[Read], ReadPipe[ReadPair]]:
+    # This must stay a plain function (no `yield` here): if it were a
+    # generator, `return parse_fastq_single(...)` would end iteration
+    # immediately and single-end input would produce no reads.
     if len(fs) == 1:
         return parse_fastq_single(fs[0])
     elif len(fs) == 2:
-        for rp in zip(parse_fastq_single(fs[0]), parse_fastq_single(fs[1])):
-            yield rp
+        return parse_fastq_paired(fs[0], fs[1])
     else:
         raise ValueError("Only single or paired-end FASTQ files are supported.")
 
