@@ -1,5 +1,7 @@
 from io import StringIO
 
+import pytest
+
 from heyfastqlib.io import parse_fastq, parse_fastq_single, parse_seq_ids, write_fastq
 from heyfastqlib.read import Read
 
@@ -26,6 +28,21 @@ def test_parse_fastq():
         Read("ab c", "GGCA", "==;G"),
         Read("d:e:f", "CCGT", "1,4E"),
     ]
+
+
+def test_parse_fastq_single_end():
+    # A one-element tuple of files must yield every read. Before the fix,
+    # parse_fastq was a generator function, so `return parse_fastq_single(...)`
+    # ended iteration immediately and single-end input produced no reads.
+    handle = make_fastq(["@a", "TA", "+", "GG", "@b", "CG", "+", "AB"])
+    reads = parse_fastq((handle,))
+    assert list(reads) == [Read("a", "TA", "GG"), Read("b", "CG", "AB")]
+
+
+def test_parse_fastq_too_many_files():
+    fqs = tuple(make_fastq(["@a", "TA", "+", "GG"]) for _ in range(3))
+    with pytest.raises(ValueError):
+        list(parse_fastq(fqs))
 
 
 def test_parse_fastq_paired():
